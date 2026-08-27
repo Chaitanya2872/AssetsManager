@@ -1,43 +1,13 @@
-version: '3.8'
+# ─── Build Stage ───────────────────────────────────────────────────
+FROM maven:3.9-eclipse-temurin-17 AS builder
+WORKDIR /app
+COPY pom.xml .
+RUN mvn dependency:go-offline -q
+COPY src ./src
+RUN mvn clean package -DskipTests -q
 
-services:
-  postgres:
-    image: postgres:15-alpine
-    container_name: asset-management-postgres
-    environment:
-      POSTGRES_DB: asset_management
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      PGDATA: /var/lib/postgresql/data/pgdata
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres-data:/var/lib/postgresql/data
-    networks:
-      - asset-network
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  pgadmin:
-    image: dpage/pgadmin4:latest
-    container_name: asset-management-pgadmin
-    environment:
-      PGADMIN_DEFAULT_EMAIL: admin@bmsedge.com
-      PGADMIN_DEFAULT_PASSWORD: admin
-    ports:
-      - "5050:80"
-    networks:
-      - asset-network
-    depends_on:
-      - postgres
-
-volumes:
-  postgres-data:
-    driver: local
-
-networks:
-  asset-network:
-    driver: bridge
+# ─── Runtime Stage ─────────────────────────────────────────────────
+FROM eclipse-temurin:17-jre-alpine
+WORKDIR /app
+COPY --from=builder /app/target/*.jar app.jar
+ENTRYPOINT ["java", "-jar", "app.jar"]
