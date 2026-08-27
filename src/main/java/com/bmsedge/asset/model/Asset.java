@@ -1,6 +1,10 @@
 package com.bmsedge.asset.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
+
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
@@ -9,41 +13,60 @@ import java.util.Set;
 import java.util.UUID;
 
 @Entity
-@Table(name = "assets")
+@Table(
+        name = "assets",
+        indexes = {
+                @Index(name = "idx_asset_category", columnList = "asset_category"),
+                @Index(name = "idx_asset_status", columnList = "status"),
+                @Index(name = "idx_asset_location", columnList = "location"),
+                @Index(name = "idx_asset_vendor_id", columnList = "vendor_id"),
+                @Index(name = "idx_asset_branch", columnList = "branch"),
+                @Index(name = "idx_asset_manufacturer", columnList = "manufacturer"),
+                @Index(name = "idx_asset_dlp_end_date", columnList = "dlp_end_date"),
+                @Index(name = "idx_asset_warranty_end_date", columnList = "warranty_end_date"),
+                @Index(name = "idx_asset_contract_end_date", columnList = "vendor_contract_end")
+        }
+)
 public class Asset {
 
-    // ================= BASIC FIELDS =================
+    // ============================================================
+    // PRIMARY KEY
+    // ============================================================
 
     @Id
-    @Column(name = "asset_id", nullable = false, updatable = false)
+    @Column(name = "asset_id", nullable = false, updatable = false, length = 100)
     private String assetId;
 
-    @Column(name = "asset_name", nullable = false)
+    // ============================================================
+    // BASIC INFORMATION
+    // ============================================================
+
+    @Column(name = "asset_name", nullable = false, length = 100)
     private String assetName;
 
-    @Column(name = "asset_category", nullable = false)
+    @Column(name = "asset_category", nullable = false, length = 100)
     private String assetCategory;
 
-    @Column(name = "asset_type")
+    @Column(name = "asset_type", length = 50)
     private String assetType;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(name = "status", nullable = false, length = 50)
     private AssetStatus status;
 
-    @Column
+    @Column(name = "location", length = 200)
     private String location;
 
-    @Column
+    @Column(name = "manufacturer", length = 100)
     private String manufacturer;
 
-    @Column
+    @Column(name = "branch", length = 100)
     private String branch;
 
-    @Column(unique = true)
+    @Column(name = "serial_number", unique = true, length = 100)
     private String serialNumber;
 
-    @Column(name = "model_number")
+    @Column(name = "model_number", length = 100)
     private String modelNumber;
 
     @Column(name = "description", length = 1000)
@@ -55,30 +78,63 @@ public class Asset {
     @Column(name = "quantity")
     private Integer quantity;
 
-    // ================= VENDOR FIELDS (for backward compatibility) =================
-    // Note: Primary vendor relationship is Many-to-Many, but keeping these for quick access
+    // ============================================================
+    // ASSIGNMENT
+    // ============================================================
 
-    @Column(name = "vendor_id")
+    @Column(name = "assigned_to", length = 255)
+    private String assignedTo;
+
+    // ============================================================
+    // ASSET VALUE
+    // ============================================================
+
+    @Column(name = "value", precision = 15, scale = 2)
+    private BigDecimal value;
+
+    // ============================================================
+    // VENDOR INFORMATION
+    // ============================================================
+
+    @Column(name = "vendor_id", length = 50)
     private String vendorId;
 
-    @Column(name = "vendor_name")
+    @Column(name = "vendor_name", length = 100)
     private String vendorName;
 
-    @Column(name = "vendor_email")
+    @Column(name = "vendor_email", length = 100)
     private String vendorEmail;
 
-    @Column(name = "vendor_phone")
+    @Column(name = "vendor_phone", length = 20)
     private String vendorPhone;
 
-    // ================= RELATIONSHIPS =================
+    // ============================================================
+    // VENDOR RELATIONSHIP
+    // ============================================================
 
+    /**
+     * The relationship is managed from Vendor.
+     *
+     * JsonIgnore is important here because otherwise:
+     *
+     * Asset -> Vendor -> Asset -> Vendor ...
+     *
+     * can result in recursive JSON serialization.
+     */
     @ManyToMany(mappedBy = "assets", fetch = FetchType.LAZY)
+    @JsonIgnore
     private Set<Vendor> vendors = new HashSet<>();
 
-    // ================= DLP / WARRANTY / CONTRACT =================
+    // ============================================================
+    // DLP
+    // ============================================================
 
     @Column(name = "dlp_end_date")
     private LocalDate dlpEndDate;
+
+    // ============================================================
+    // WARRANTY
+    // ============================================================
 
     @Column(name = "warranty_start_date")
     private LocalDate warrantyStartDate;
@@ -86,13 +142,19 @@ public class Asset {
     @Column(name = "warranty_end_date")
     private LocalDate warrantyEndDate;
 
+    // ============================================================
+    // VENDOR CONTRACT
+    // ============================================================
+
     @Column(name = "vendor_contract_start")
     private LocalDate vendorContractStart;
 
     @Column(name = "vendor_contract_end")
     private LocalDate vendorContractEnd;
 
-    // ================= AUDIT =================
+    // ============================================================
+    // AUDIT
+    // ============================================================
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -100,32 +162,50 @@ public class Asset {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
-    // ================= ENUM =================
+    // ============================================================
+    // DLP ALERT LEVEL
+    // ============================================================
 
     public enum DlpAlertLevel {
-        EXPIRED, CRITICAL, WARNING, NONE
+        EXPIRED,
+        CRITICAL,
+        WARNING,
+        NONE
     }
 
-    // ================= JPA CALLBACKS =================
+    // ============================================================
+    // JPA LIFECYCLE
+    // ============================================================
 
     @PrePersist
     protected void onCreate() {
-        if (this.assetId == null) {
-            this.assetId = UUID.randomUUID().toString();
+
+        if (assetId == null || assetId.isBlank()) {
+            assetId = UUID.randomUUID().toString();
         }
-        this.createdAt = LocalDateTime.now();
-        this.updatedAt = LocalDateTime.now();
-        if (this.status == null) {
-            this.status = AssetStatus.AVAILABLE;
+
+        LocalDateTime now = LocalDateTime.now();
+
+        createdAt = now;
+        updatedAt = now;
+
+        if (status == null) {
+            status = AssetStatus.AVAILABLE;
+        }
+
+        if (quantity == null) {
+            quantity = 1;
         }
     }
 
     @PreUpdate
     protected void onUpdate() {
-        this.updatedAt = LocalDateTime.now();
+        updatedAt = LocalDateTime.now();
     }
 
-    // ================= GETTERS & SETTERS =================
+    // ============================================================
+    // GETTERS & SETTERS
+    // ============================================================
 
     public String getAssetId() {
         return assetId;
@@ -231,6 +311,22 @@ public class Asset {
         this.quantity = quantity;
     }
 
+    public String getAssignedTo() {
+        return assignedTo;
+    }
+
+    public void setAssignedTo(String assignedTo) {
+        this.assignedTo = assignedTo;
+    }
+
+    public BigDecimal getValue() {
+        return value;
+    }
+
+    public void setValue(BigDecimal value) {
+        this.value = value;
+    }
+
     public String getVendorId() {
         return vendorId;
     }
@@ -263,12 +359,13 @@ public class Asset {
         this.vendorPhone = vendorPhone;
     }
 
+    @JsonIgnore
     public Set<Vendor> getVendors() {
         return vendors;
     }
 
     public void setVendors(Set<Vendor> vendors) {
-        this.vendors = vendors;
+        this.vendors = vendors != null ? vendors : new HashSet<>();
     }
 
     public LocalDate getDlpEndDate() {
@@ -319,52 +416,157 @@ public class Asset {
         return updatedAt;
     }
 
-    // ================= BUSINESS LOGIC =================
+    // ============================================================
+    // DLP BUSINESS LOGIC
+    // ============================================================
 
     public boolean isDlpExpired() {
-        return dlpEndDate != null && LocalDate.now().isAfter(dlpEndDate);
+
+        return dlpEndDate != null
+                && LocalDate.now().isAfter(dlpEndDate);
     }
 
     public DlpAlertLevel getDlpAlertLevel() {
-        if (dlpEndDate == null) return DlpAlertLevel.NONE;
 
-        long days = ChronoUnit.DAYS.between(LocalDate.now(), dlpEndDate);
+        if (dlpEndDate == null) {
+            return DlpAlertLevel.NONE;
+        }
 
-        if (days < 0) return DlpAlertLevel.EXPIRED;
-        if (days <= 7) return DlpAlertLevel.CRITICAL;
-        if (days <= 30) return DlpAlertLevel.WARNING;
+        long days = ChronoUnit.DAYS.between(
+                LocalDate.now(),
+                dlpEndDate
+        );
+
+        if (days < 0) {
+            return DlpAlertLevel.EXPIRED;
+        }
+
+        if (days <= 7) {
+            return DlpAlertLevel.CRITICAL;
+        }
+
+        if (days <= 30) {
+            return DlpAlertLevel.WARNING;
+        }
 
         return DlpAlertLevel.NONE;
     }
 
+    // ============================================================
+    // WARRANTY BUSINESS LOGIC
+    // ============================================================
+
     public boolean isWarrantyExpired() {
-        return warrantyEndDate != null && LocalDate.now().isAfter(warrantyEndDate);
+
+        return warrantyEndDate != null
+                && LocalDate.now().isAfter(warrantyEndDate);
     }
 
     public boolean isWarrantyExpiringSoon(int days) {
-        if (warrantyEndDate == null) return false;
-        long daysUntilExpiry = ChronoUnit.DAYS.between(LocalDate.now(), warrantyEndDate);
-        return daysUntilExpiry >= 0 && daysUntilExpiry <= days;
+
+        if (warrantyEndDate == null || days < 0) {
+            return false;
+        }
+
+        long daysUntilExpiry = ChronoUnit.DAYS.between(
+                LocalDate.now(),
+                warrantyEndDate
+        );
+
+        return daysUntilExpiry >= 0
+                && daysUntilExpiry <= days;
     }
 
+    // ============================================================
+    // VENDOR CONTRACT BUSINESS LOGIC
+    // ============================================================
+
     public boolean isVendorContractExpired() {
-        return vendorContractEnd != null && LocalDate.now().isAfter(vendorContractEnd);
+
+        return vendorContractEnd != null
+                && LocalDate.now().isAfter(vendorContractEnd);
     }
 
     public boolean isVendorContractExpiringSoon(int days) {
-        if (vendorContractEnd == null) return false;
-        long daysUntilExpiry = ChronoUnit.DAYS.between(LocalDate.now(), vendorContractEnd);
-        return daysUntilExpiry >= 0 && daysUntilExpiry <= days;
+
+        if (vendorContractEnd == null || days < 0) {
+            return false;
+        }
+
+        long daysUntilExpiry = ChronoUnit.DAYS.between(
+                LocalDate.now(),
+                vendorContractEnd
+        );
+
+        return daysUntilExpiry >= 0
+                && daysUntilExpiry <= days;
+    }
+
+    // ============================================================
+    // HELPER METHODS
+    // ============================================================
+
+    @JsonProperty("qrCode")
+    public String getQrCode() {
+        return assetId;
+    }
+
+    @JsonProperty("id")
+    public String getId() {
+        return assetId;
+    }
+
+    // ============================================================
+    // OBJECT METHODS
+    // ============================================================
+
+    @Override
+    public boolean equals(Object o) {
+
+        if (this == o) {
+            return true;
+        }
+
+        if (!(o instanceof Asset)) {
+            return false;
+        }
+
+        Asset asset = (Asset) o;
+
+        return assetId != null
+                && assetId.equals(asset.assetId);
+    }
+
+    @Override
+    public int hashCode() {
+
+        return getClass().hashCode();
     }
 
     @Override
     public String toString() {
+
         return "Asset{" +
                 "assetId='" + assetId + '\'' +
                 ", assetName='" + assetName + '\'' +
                 ", assetCategory='" + assetCategory + '\'' +
+                ", assetType='" + assetType + '\'' +
                 ", status=" + status +
                 ", location='" + location + '\'' +
+                ", manufacturer='" + manufacturer + '\'' +
+                ", branch='" + branch + '\'' +
+                ", serialNumber='" + serialNumber + '\'' +
+                ", modelNumber='" + modelNumber + '\'' +
+                ", quantity=" + quantity +
+                ", assignedTo='" + assignedTo + '\'' +
+                ", value=" + value +
+                ", vendorId='" + vendorId + '\'' +
+                ", vendorName='" + vendorName + '\'' +
+                ", dlpEndDate=" + dlpEndDate +
+                ", warrantyStartDate=" + warrantyStartDate +
+                ", warrantyEndDate=" + warrantyEndDate +
+                ", vendorContractStart=" + vendorContractStart +
+                ", vendorContractEnd=" + vendorContractEnd +
                 '}';
     }
 }

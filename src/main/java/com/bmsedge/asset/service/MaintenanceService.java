@@ -6,174 +6,667 @@ import com.bmsedge.asset.exception.MaintenanceNotFoundException;
 import com.bmsedge.asset.model.Maintenance;
 import com.bmsedge.asset.model.MaintenanceStatus;
 import com.bmsedge.asset.repository.MaintenanceRepository;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @Transactional
 public class MaintenanceService {
 
-    private static final Logger logger = LoggerFactory.getLogger(MaintenanceService.class);
+    private static final Logger logger =
+            LoggerFactory.getLogger(MaintenanceService.class);
+
     private final MaintenanceRepository repository;
 
-    public MaintenanceService(MaintenanceRepository repository) {
+
+    public MaintenanceService(
+            MaintenanceRepository repository
+    ) {
         this.repository = repository;
     }
 
-    public Maintenance create(MaintenanceCreateRequest request) {
-        logger.info("Creating maintenance for asset: {}", request.getAssetId());
 
-        Maintenance maintenance = new Maintenance();
-        maintenance.setAssetId(request.getAssetId());
-        maintenance.setVendorId(request.getVendorId());
-        maintenance.setMaintenanceType(request.getMaintenanceType());
-        maintenance.setScheduledDate(request.getScheduledDate());
-        maintenance.setPriority(request.getPriority());
-        maintenance.setDescription(request.getDescription());
-        maintenance.setTechnicianName(request.getTechnicianName());
-        maintenance.setNotes(request.getNotes());
+    // ============================================================
+    // CREATE
+    // ============================================================
 
-        Maintenance savedMaintenance = repository.save(maintenance);
-        logger.info("Maintenance created successfully with ID: {}", savedMaintenance.getMaintenanceId());
+    public Maintenance create(
+            MaintenanceCreateRequest request
+    ) {
 
-        return savedMaintenance;
+        if (request == null) {
+            throw new IllegalArgumentException(
+                    "Maintenance request cannot be null"
+            );
+        }
+
+        if (request.getAssetId() == null ||
+                request.getAssetId().isBlank()) {
+
+            throw new IllegalArgumentException(
+                    "Asset ID is required"
+            );
+        }
+
+        if (request.getMaintenanceType() == null ||
+                request.getMaintenanceType().isBlank()) {
+
+            throw new IllegalArgumentException(
+                    "Maintenance type is required"
+            );
+        }
+
+        if (request.getPriority() == null ||
+                request.getPriority().isBlank()) {
+
+            throw new IllegalArgumentException(
+                    "Priority is required"
+            );
+        }
+
+
+        logger.info(
+                "Creating maintenance for asset: {}",
+                request.getAssetId()
+        );
+
+
+        Maintenance maintenance =
+                new Maintenance();
+
+
+        maintenance.setAssetId(
+                request.getAssetId().trim()
+        );
+
+        maintenance.setVendorId(
+                request.getVendorId()
+        );
+
+        maintenance.setMaintenanceType(
+                request.getMaintenanceType().trim().toUpperCase()
+        );
+
+        maintenance.setScheduledDate(
+                request.getScheduledDate()
+        );
+
+        maintenance.setPriority(
+                request.getPriority().trim().toUpperCase()
+        );
+
+        maintenance.setDescription(
+                request.getDescription()
+        );
+
+        maintenance.setWorkPerformed(
+                request.getWorkPerformed()
+        );
+
+        maintenance.setPartsReplaced(
+                request.getPartsReplaced()
+        );
+
+        maintenance.setCost(
+                request.getCost() == null
+                        ? 0.0
+                        : request.getCost()
+        );
+
+        maintenance.setTechnicianName(
+                request.getTechnicianName()
+        );
+
+        maintenance.setNotes(
+                request.getNotes()
+        );
+
+        maintenance.setCompletedDate(
+                request.getCompletedDate()
+        );
+
+        maintenance.setNextMaintenanceDate(
+                request.getNextMaintenanceDate()
+        );
+
+        maintenance.setDowntimeHours(
+                request.getDowntimeHours()
+        );
+
+
+        if (request.getStatus() != null) {
+
+            maintenance.setStatus(
+                    request.getStatus()
+            );
+
+        } else {
+
+            maintenance.setStatus(
+                    MaintenanceStatus.SCHEDULED
+            );
+        }
+
+
+        Maintenance saved =
+                repository.save(maintenance);
+
+
+        logger.info(
+                "Maintenance created successfully: {}",
+                saved.getMaintenanceId()
+        );
+
+
+        return saved;
     }
+
+
+    // ============================================================
+    // GET BY ID
+    // ============================================================
 
     @Transactional(readOnly = true)
     public Maintenance get(String id) {
-        logger.debug("Fetching maintenance with ID: {}", id);
+
+        if (id == null || id.isBlank()) {
+
+            throw new MaintenanceNotFoundException(
+                    String.valueOf(id)
+            );
+        }
+
         return repository.findById(id)
-                .orElseThrow(() -> {
-                    logger.error("Maintenance not found with ID: {}", id);
-                    return new MaintenanceNotFoundException(id);
-                });
+                .orElseThrow(() ->
+                        new MaintenanceNotFoundException(id)
+                );
     }
+
+
+    // ============================================================
+    // GET ALL
+    // ============================================================
 
     @Transactional(readOnly = true)
     public List<Maintenance> getAll() {
-        logger.debug("Fetching all maintenance records");
+
         return repository.findAll();
     }
 
-    @Transactional(readOnly = true)
-    public List<Maintenance> getByAsset(String assetId) {
-        logger.debug("Fetching maintenance for asset: {}", assetId);
-        return repository.findByAssetIdOrderByScheduledDateDesc(assetId);
-    }
+
+    // ============================================================
+    // GET BY ASSET
+    // ============================================================
 
     @Transactional(readOnly = true)
-    public List<Maintenance> getByVendor(String vendorId) {
-        logger.debug("Fetching maintenance for vendor: {}", vendorId);
+    public List<Maintenance> getByAsset(
+            String assetId
+    ) {
+
+        if (assetId == null || assetId.isBlank()) {
+            throw new IllegalArgumentException(
+                    "Asset ID is required"
+            );
+        }
+
+        return repository
+                .findByAssetIdOrderByScheduledDateDesc(
+                        assetId
+                );
+    }
+
+
+    // ============================================================
+    // GET BY VENDOR
+    // ============================================================
+
+    @Transactional(readOnly = true)
+    public List<Maintenance> getByVendor(
+            String vendorId
+    ) {
+
         return repository.findByVendorId(vendorId);
     }
 
+
+    // ============================================================
+    // GET BY STATUS
+    // ============================================================
+
     @Transactional(readOnly = true)
-    public List<Maintenance> getByStatus(MaintenanceStatus status) {
-        logger.debug("Fetching maintenance with status: {}", status);
+    public List<Maintenance> getByStatus(
+            MaintenanceStatus status
+    ) {
+
+        if (status == null) {
+            throw new IllegalArgumentException(
+                    "Maintenance status is required"
+            );
+        }
+
         return repository.findByStatus(status);
     }
 
+
+    // ============================================================
+    // OVERDUE
+    // ============================================================
+
     @Transactional(readOnly = true)
     public List<Maintenance> getOverdue() {
-        logger.debug("Fetching overdue maintenance");
-        return repository.findOverdue(LocalDate.now());
+
+        return repository.findOverdue(
+                LocalDate.now()
+        );
     }
+
+
+    // ============================================================
+    // UPCOMING
+    // ============================================================
 
     @Transactional(readOnly = true)
-    public List<Maintenance> getUpcoming(int days) {
-        logger.debug("Fetching upcoming maintenance for next {} days", days);
-        LocalDate start = LocalDate.now();
-        LocalDate end = start.plusDays(days);
-        return repository.findUpcoming(start, end);
+    public List<Maintenance> getUpcoming(
+            int days
+    ) {
+
+        if (days < 0) {
+            days = 0;
+        }
+
+        LocalDate start =
+                LocalDate.now();
+
+        LocalDate end =
+                start.plusDays(days);
+
+        return repository.findUpcoming(
+                start,
+                end
+        );
     }
 
-    public Maintenance update(String id, MaintenanceUpdateRequest request) {
-        logger.info("Updating maintenance with ID: {}", id);
 
-        Maintenance maintenance = get(id);
+    // ============================================================
+    // UPDATE
+    // ============================================================
+
+    public Maintenance update(
+            String id,
+            MaintenanceUpdateRequest request
+    ) {
+
+        if (request == null) {
+            throw new IllegalArgumentException(
+                    "Maintenance update cannot be null"
+            );
+        }
+
+
+        Maintenance maintenance =
+                get(id);
+
 
         if (request.getScheduledDate() != null) {
-            maintenance.setScheduledDate(request.getScheduledDate());
+            maintenance.setScheduledDate(
+                    request.getScheduledDate()
+            );
         }
+
+
         if (request.getCompletedDate() != null) {
-            maintenance.setCompletedDate(request.getCompletedDate());
+            maintenance.setCompletedDate(
+                    request.getCompletedDate()
+            );
         }
+
+
         if (request.getStatus() != null) {
-            maintenance.setStatus(request.getStatus());
+            maintenance.setStatus(
+                    request.getStatus()
+            );
         }
-        if (request.getPriority() != null) {
-            maintenance.setPriority(request.getPriority());
+
+
+        if (request.getPriority() != null &&
+                !request.getPriority().isBlank()) {
+
+            maintenance.setPriority(
+                    request.getPriority()
+                            .trim()
+                            .toUpperCase()
+            );
         }
+
+
         if (request.getDescription() != null) {
-            maintenance.setDescription(request.getDescription());
+            maintenance.setDescription(
+                    request.getDescription()
+            );
         }
+
+
         if (request.getWorkPerformed() != null) {
-            maintenance.setWorkPerformed(request.getWorkPerformed());
+            maintenance.setWorkPerformed(
+                    request.getWorkPerformed()
+            );
         }
+
+
         if (request.getPartsReplaced() != null) {
-            maintenance.setPartsReplaced(request.getPartsReplaced());
+            maintenance.setPartsReplaced(
+                    request.getPartsReplaced()
+            );
         }
+
+
         if (request.getCost() != null) {
-            maintenance.setCost(request.getCost());
+            maintenance.setCost(
+                    request.getCost()
+            );
         }
+
+
         if (request.getTechnicianName() != null) {
-            maintenance.setTechnicianName(request.getTechnicianName());
+            maintenance.setTechnicianName(
+                    request.getTechnicianName()
+            );
         }
+
+
         if (request.getNotes() != null) {
-            maintenance.setNotes(request.getNotes());
+            maintenance.setNotes(
+                    request.getNotes()
+            );
         }
+
+
         if (request.getNextMaintenanceDate() != null) {
-            maintenance.setNextMaintenanceDate(request.getNextMaintenanceDate());
+            maintenance.setNextMaintenanceDate(
+                    request.getNextMaintenanceDate()
+            );
         }
+
+
         if (request.getDowntimeHours() != null) {
-            maintenance.setDowntimeHours(request.getDowntimeHours());
+            maintenance.setDowntimeHours(
+                    request.getDowntimeHours()
+            );
         }
 
-        Maintenance savedMaintenance = repository.save(maintenance);
-        logger.info("Maintenance updated successfully: {}", id);
 
-        return savedMaintenance;
+        return repository.save(
+                maintenance
+        );
     }
 
-    public Maintenance complete(String id, String workPerformed, Double cost) {
-        logger.info("Completing maintenance with ID: {}", id);
 
-        Maintenance maintenance = get(id);
-        maintenance.setStatus(MaintenanceStatus.COMPLETED);
-        maintenance.setCompletedDate(LocalDate.now());
-        maintenance.setWorkPerformed(workPerformed);
-        maintenance.setCost(cost);
+    // ============================================================
+    // COMPLETE
+    // ============================================================
 
-        Maintenance savedMaintenance = repository.save(maintenance);
-        logger.info("Maintenance completed successfully: {}", id);
+    public Maintenance complete(
+            String id,
+            String workPerformed,
+            Double cost
+    ) {
 
-        return savedMaintenance;
+        Maintenance maintenance =
+                get(id);
+
+
+        maintenance.setStatus(
+                MaintenanceStatus.COMPLETED
+        );
+
+        maintenance.setCompletedDate(
+                LocalDate.now()
+        );
+
+        maintenance.setWorkPerformed(
+                workPerformed
+        );
+
+        maintenance.setCost(
+                cost == null ? 0.0 : cost
+        );
+
+
+        return repository.save(
+                maintenance
+        );
     }
+
+
+    // ============================================================
+    // DELETE
+    // ============================================================
 
     public void delete(String id) {
-        logger.info("Deleting maintenance with ID: {}", id);
 
-        if (!repository.existsById(id)) {
-            logger.error("Maintenance not found with ID: {}", id);
-            throw new MaintenanceNotFoundException(id);
+        Maintenance maintenance =
+                get(id);
+
+        repository.delete(
+                maintenance
+        );
+
+        logger.info(
+                "Maintenance deleted successfully: {}",
+                id
+        );
+    }
+
+
+    // ============================================================
+    // COUNT BY STATUS
+    // ============================================================
+
+    @Transactional(readOnly = true)
+    public long countByStatus(
+            MaintenanceStatus status
+    ) {
+
+        return repository.countByStatus(
+                status
+        );
+    }
+
+
+    // ============================================================
+    // COUNT BY ASSET
+    // ============================================================
+
+    @Transactional(readOnly = true)
+    public long countByAsset(
+            String assetId
+    ) {
+
+        return repository.countByAssetId(
+                assetId
+        );
+    }
+
+
+    // ============================================================
+    // STATISTICS
+    // ============================================================
+
+    @Transactional(readOnly = true)
+    public Map<String, Object> getStatistics() {
+
+        Map<String, Object> statistics =
+                new HashMap<>();
+
+
+        long total =
+                repository.count();
+
+
+        long scheduled =
+                countByStatus(
+                        MaintenanceStatus.SCHEDULED
+                );
+
+
+        long pending =
+                countByStatus(
+                        MaintenanceStatus.PENDING
+                );
+
+
+        long inProgress =
+                countByStatus(
+                        MaintenanceStatus.IN_PROGRESS
+                );
+
+
+        long completed =
+                countByStatus(
+                        MaintenanceStatus.COMPLETED
+                );
+
+
+        long cancelled =
+                countByStatus(
+                        MaintenanceStatus.CANCELLED
+                );
+
+
+        long overdue =
+                countByStatus(
+                        MaintenanceStatus.OVERDUE
+                );
+
+
+        long onHold =
+                countByStatus(
+                        MaintenanceStatus.ON_HOLD
+                );
+
+
+        LocalDate today =
+                LocalDate.now();
+
+        LocalDate end =
+                today.plusDays(30);
+
+
+        long upcoming =
+                repository.countUpcoming(
+                        today,
+                        end
+                );
+
+
+        Double totalCost =
+                repository.sumCost();
+
+
+        if (totalCost == null) {
+            totalCost = 0.0;
         }
 
-        repository.deleteById(id);
-        logger.info("Maintenance deleted successfully: {}", id);
-    }
 
-    @Transactional(readOnly = true)
-    public long countByStatus(MaintenanceStatus status) {
-        return repository.countByStatus(status);
-    }
+        List<Object[]> typeCounts =
+                repository.countByMaintenanceType();
 
-    @Transactional(readOnly = true)
-    public long countByAsset(String assetId) {
-        return repository.countByAssetId(assetId);
+
+        Map<String, Long> categoryBreakdown =
+                new HashMap<>();
+
+
+        for (Object[] row : typeCounts) {
+
+            if (row[0] == null) {
+                continue;
+            }
+
+            String type =
+                    String.valueOf(row[0]);
+
+            Long count =
+                    row[1] == null
+                            ? 0L
+                            : ((Number) row[1]).longValue();
+
+            categoryBreakdown.put(
+                    type,
+                    count
+            );
+        }
+
+
+        statistics.put(
+                "total",
+                total
+        );
+
+        statistics.put(
+                "totalMaintenance",
+                total
+        );
+
+        statistics.put(
+                "scheduled",
+                scheduled
+        );
+
+        statistics.put(
+                "pending",
+                pending
+        );
+
+        statistics.put(
+                "inProgress",
+                inProgress
+        );
+
+        statistics.put(
+                "completed",
+                completed
+        );
+
+        statistics.put(
+                "cancelled",
+                cancelled
+        );
+
+        statistics.put(
+                "overdue",
+                overdue
+        );
+
+        statistics.put(
+                "onHold",
+                onHold
+        );
+
+        statistics.put(
+                "upcoming",
+                upcoming
+        );
+
+        statistics.put(
+                "totalCost",
+                totalCost
+        );
+
+        statistics.put(
+                "categoryBreakdown",
+                categoryBreakdown
+        );
+
+
+        return statistics;
     }
 }

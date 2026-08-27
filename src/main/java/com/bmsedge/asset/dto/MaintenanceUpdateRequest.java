@@ -1,28 +1,40 @@
 package com.bmsedge.asset.dto;
 
 import com.bmsedge.asset.model.MaintenanceStatus;
+
 import java.time.LocalDate;
 
 public class MaintenanceUpdateRequest {
 
     private LocalDate scheduledDate;
+
     private LocalDate completedDate;
+
     private MaintenanceStatus status;
+
     private String priority;
+
     private String description;
+
     private String workPerformed;
+
     private String partsReplaced;
+
     private Double cost;
+
     private String technicianName;
+
     private String notes;
+
     private LocalDate nextMaintenanceDate;
+
     private Double downtimeHours;
 
-    // Constructors
+
     public MaintenanceUpdateRequest() {
     }
 
-    // Getters and Setters
+
     public LocalDate getScheduledDate() {
         return scheduledDate;
     }
@@ -30,6 +42,7 @@ public class MaintenanceUpdateRequest {
     public void setScheduledDate(LocalDate scheduledDate) {
         this.scheduledDate = scheduledDate;
     }
+
 
     public LocalDate getCompletedDate() {
         return completedDate;
@@ -39,6 +52,7 @@ public class MaintenanceUpdateRequest {
         this.completedDate = completedDate;
     }
 
+
     public MaintenanceStatus getStatus() {
         return status;
     }
@@ -46,6 +60,7 @@ public class MaintenanceUpdateRequest {
     public void setStatus(MaintenanceStatus status) {
         this.status = status;
     }
+
 
     public String getPriority() {
         return priority;
@@ -55,6 +70,7 @@ public class MaintenanceUpdateRequest {
         this.priority = priority;
     }
 
+
     public String getDescription() {
         return description;
     }
@@ -62,6 +78,7 @@ public class MaintenanceUpdateRequest {
     public void setDescription(String description) {
         this.description = description;
     }
+
 
     public String getWorkPerformed() {
         return workPerformed;
@@ -71,6 +88,7 @@ public class MaintenanceUpdateRequest {
         this.workPerformed = workPerformed;
     }
 
+
     public String getPartsReplaced() {
         return partsReplaced;
     }
@@ -78,6 +96,7 @@ public class MaintenanceUpdateRequest {
     public void setPartsReplaced(String partsReplaced) {
         this.partsReplaced = partsReplaced;
     }
+
 
     public Double getCost() {
         return cost;
@@ -87,6 +106,7 @@ public class MaintenanceUpdateRequest {
         this.cost = cost;
     }
 
+
     public String getTechnicianName() {
         return technicianName;
     }
@@ -94,6 +114,7 @@ public class MaintenanceUpdateRequest {
     public void setTechnicianName(String technicianName) {
         this.technicianName = technicianName;
     }
+
 
     public String getNotes() {
         return notes;
@@ -103,6 +124,7 @@ public class MaintenanceUpdateRequest {
         this.notes = notes;
     }
 
+
     public LocalDate getNextMaintenanceDate() {
         return nextMaintenanceDate;
     }
@@ -110,6 +132,7 @@ public class MaintenanceUpdateRequest {
     public void setNextMaintenanceDate(LocalDate nextMaintenanceDate) {
         this.nextMaintenanceDate = nextMaintenanceDate;
     }
+
 
     public Double getDowntimeHours() {
         return downtimeHours;

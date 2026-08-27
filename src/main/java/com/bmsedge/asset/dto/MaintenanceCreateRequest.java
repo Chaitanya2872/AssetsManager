@@ -1,7 +1,8 @@
 package com.bmsedge.asset.dto;
 
+import com.bmsedge.asset.model.MaintenanceStatus;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
+
 import java.time.LocalDate;
 
 public class MaintenanceCreateRequest {
@@ -12,28 +13,38 @@ public class MaintenanceCreateRequest {
     private String vendorId;
 
     @NotBlank(message = "Maintenance type is required")
-    private String maintenanceType; // PREVENTIVE, CORRECTIVE, PREDICTIVE, EMERGENCY
+    private String maintenanceType;
 
     private LocalDate scheduledDate;
 
+    private MaintenanceStatus status;
+
     @NotBlank(message = "Priority is required")
-    private String priority; // LOW, MEDIUM, HIGH, CRITICAL
+    private String priority;
 
     private String description;
+
+    private String workPerformed;
+
+    private String partsReplaced;
+
+    private Double cost;
+
     private String technicianName;
+
     private String notes;
 
-    // Constructors
+    private LocalDate completedDate;
+
+    private LocalDate nextMaintenanceDate;
+
+    private Double downtimeHours;
+
+
     public MaintenanceCreateRequest() {
     }
 
-    public MaintenanceCreateRequest(String assetId, String maintenanceType, String priority) {
-        this.assetId = assetId;
-        this.maintenanceType = maintenanceType;
-        this.priority = priority;
-    }
 
-    // Getters and Setters
     public String getAssetId() {
         return assetId;
     }
@@ -41,6 +52,7 @@ public class MaintenanceCreateRequest {
     public void setAssetId(String assetId) {
         this.assetId = assetId;
     }
+
 
     public String getVendorId() {
         return vendorId;
@@ -50,6 +62,7 @@ public class MaintenanceCreateRequest {
         this.vendorId = vendorId;
     }
 
+
     public String getMaintenanceType() {
         return maintenanceType;
     }
@@ -57,6 +70,7 @@ public class MaintenanceCreateRequest {
     public void setMaintenanceType(String maintenanceType) {
         this.maintenanceType = maintenanceType;
     }
+
 
     public LocalDate getScheduledDate() {
         return scheduledDate;
@@ -66,6 +80,16 @@ public class MaintenanceCreateRequest {
         this.scheduledDate = scheduledDate;
     }
 
+
+    public MaintenanceStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(MaintenanceStatus status) {
+        this.status = status;
+    }
+
+
     public String getPriority() {
         return priority;
     }
@@ -73,6 +97,7 @@ public class MaintenanceCreateRequest {
     public void setPriority(String priority) {
         this.priority = priority;
     }
+
 
     public String getDescription() {
         return description;
@@ -82,6 +107,34 @@ public class MaintenanceCreateRequest {
         this.description = description;
     }
 
+
+    public String getWorkPerformed() {
+        return workPerformed;
+    }
+
+    public void setWorkPerformed(String workPerformed) {
+        this.workPerformed = workPerformed;
+    }
+
+
+    public String getPartsReplaced() {
+        return partsReplaced;
+    }
+
+    public void setPartsReplaced(String partsReplaced) {
+        this.partsReplaced = partsReplaced;
+    }
+
+
+    public Double getCost() {
+        return cost;
+    }
+
+    public void setCost(Double cost) {
+        this.cost = cost;
+    }
+
+
     public String getTechnicianName() {
         return technicianName;
     }
@@ -90,11 +143,39 @@ public class MaintenanceCreateRequest {
         this.technicianName = technicianName;
     }
 
+
     public String getNotes() {
         return notes;
     }
 
     public void setNotes(String notes) {
         this.notes = notes;
+    }
+
+
+    public LocalDate getCompletedDate() {
+        return completedDate;
+    }
+
+    public void setCompletedDate(LocalDate completedDate) {
+        this.completedDate = completedDate;
+    }
+
+
+    public LocalDate getNextMaintenanceDate() {
+        return nextMaintenanceDate;
+    }
+
+    public void setNextMaintenanceDate(LocalDate nextMaintenanceDate) {
+        this.nextMaintenanceDate = nextMaintenanceDate;
+    }
+
+
+    public Double getDowntimeHours() {
+        return downtimeHours;
+    }
+
+    public void setDowntimeHours(Double downtimeHours) {
+        this.downtimeHours = downtimeHours;
     }
 }

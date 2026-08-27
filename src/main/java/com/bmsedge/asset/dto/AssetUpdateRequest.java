@@ -6,77 +6,147 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Size;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
 /**
- * Data Transfer Object for updating an Asset
- * Contains all updatable fields with validation constraints
+ * DTO used for partial Asset updates.
+ *
+ * Null values mean:
+ * "Do not change this field."
  */
 public class AssetUpdateRequest {
 
     // ============================================================
-    // BASIC ASSET INFORMATION
+    // BASIC INFORMATION
     // ============================================================
 
-    @Size(min = 3, max = 100, message = "Asset name must be between 3 and 100 characters")
+    @Size(
+            min = 3,
+            max = 100,
+            message = "Asset name must be between 3 and 100 characters"
+    )
     private String assetName;
 
-    @Size(min = 2, max = 50, message = "Category must be between 2 and 50 characters")
+    @Size(
+            min = 2,
+            max = 50,
+            message = "Category must be between 2 and 50 characters"
+    )
     private String category;
 
-    @Size(max = 50, message = "Asset type must not exceed 50 characters")
+    @Size(
+            max = 50,
+            message = "Asset type must not exceed 50 characters"
+    )
     private String assetType;
 
     private AssetStatus status;
 
-    @Size(max = 200, message = "Location must not exceed 200 characters")
+    @Size(
+            max = 200,
+            message = "Location must not exceed 200 characters"
+    )
     private String location;
 
-    @Size(max = 100, message = "Manufacturer must not exceed 100 characters")
+    @Size(
+            max = 100,
+            message = "Manufacturer must not exceed 100 characters"
+    )
     private String manufacturer;
 
-    @Size(max = 100, message = "Branch must not exceed 100 characters")
+    @Size(
+            max = 100,
+            message = "Branch must not exceed 100 characters"
+    )
     private String branch;
 
-    @Size(max = 100, message = "Serial number must not exceed 100 characters")
+    @Size(
+            max = 100,
+            message = "Serial number must not exceed 100 characters"
+    )
     private String serialNumber;
 
-    @Size(max = 100, message = "Model number must not exceed 100 characters")
+    @Size(
+            max = 100,
+            message = "Model number must not exceed 100 characters"
+    )
     private String modelNumber;
 
-    @Size(max = 1000, message = "Description must not exceed 1000 characters")
+    @Size(
+            max = 1000,
+            message = "Description must not exceed 1000 characters"
+    )
     private String description;
 
     private LocalDate dateOfInstallation;
 
-    @Min(value = 0, message = "Quantity must be at least 0")
+    @Min(
+            value = 0,
+            message = "Quantity must be at least 0"
+    )
     private Integer quantity;
 
     // ============================================================
-    // VENDOR INFORMATION
+    // ASSIGNMENT
     // ============================================================
 
-    @Size(max = 50, message = "Vendor ID must not exceed 50 characters")
+    @Size(
+            max = 150,
+            message = "Assigned To must not exceed 150 characters"
+    )
+    private String assignedTo;
+
+    // ============================================================
+    // VALUE
+    // ============================================================
+
+    @DecimalMin(
+            value = "0.0",
+            inclusive = true,
+            message = "Asset value must be greater than or equal to 0"
+    )
+    private BigDecimal value;
+
+    // ============================================================
+    // VENDOR
+    // ============================================================
+
+    @Size(
+            max = 50,
+            message = "Vendor ID must not exceed 50 characters"
+    )
     private String vendorId;
 
-    @Size(max = 100, message = "Vendor name must not exceed 100 characters")
+    @Size(
+            max = 100,
+            message = "Vendor name must not exceed 100 characters"
+    )
     private String vendorName;
 
-    @Email(message = "Vendor email must be a valid email address")
-    @Size(max = 100, message = "Vendor email must not exceed 100 characters")
+    @Email(
+            message = "Vendor email must be a valid email address"
+    )
+    @Size(
+            max = 100,
+            message = "Vendor email must not exceed 100 characters"
+    )
     private String vendorEmail;
 
-    @Size(max = 20, message = "Vendor phone must not exceed 20 characters")
+    @Size(
+            max = 20,
+            message = "Vendor phone must not exceed 20 characters"
+    )
     private String vendorPhone;
 
     // ============================================================
-    // DLP (DEFECT LIABILITY PERIOD)
+    // DLP
     // ============================================================
 
     private LocalDate dlpEndDate;
 
     // ============================================================
-    // WARRANTY INFORMATION
+    // WARRANTY
     // ============================================================
 
     private LocalDate warrantyStartDate;
@@ -84,7 +154,7 @@ public class AssetUpdateRequest {
     private LocalDate warrantyEndDate;
 
     // ============================================================
-    // VENDOR CONTRACT INFORMATION
+    // CONTRACT
     // ============================================================
 
     private LocalDate vendorContractStart;
@@ -92,7 +162,7 @@ public class AssetUpdateRequest {
     private LocalDate vendorContractEnd;
 
     // ============================================================
-    // CONSTRUCTORS
+    // CONSTRUCTOR
     // ============================================================
 
     public AssetUpdateRequest() {
@@ -186,7 +256,9 @@ public class AssetUpdateRequest {
         return dateOfInstallation;
     }
 
-    public void setDateOfInstallation(LocalDate dateOfInstallation) {
+    public void setDateOfInstallation(
+            LocalDate dateOfInstallation
+    ) {
         this.dateOfInstallation = dateOfInstallation;
     }
 
@@ -196,6 +268,22 @@ public class AssetUpdateRequest {
 
     public void setQuantity(Integer quantity) {
         this.quantity = quantity;
+    }
+
+    public String getAssignedTo() {
+        return assignedTo;
+    }
+
+    public void setAssignedTo(String assignedTo) {
+        this.assignedTo = assignedTo;
+    }
+
+    public BigDecimal getValue() {
+        return value;
+    }
+
+    public void setValue(BigDecimal value) {
+        this.value = value;
     }
 
     public String getVendorId() {
@@ -242,7 +330,9 @@ public class AssetUpdateRequest {
         return warrantyStartDate;
     }
 
-    public void setWarrantyStartDate(LocalDate warrantyStartDate) {
+    public void setWarrantyStartDate(
+            LocalDate warrantyStartDate
+    ) {
         this.warrantyStartDate = warrantyStartDate;
     }
 
@@ -250,7 +340,9 @@ public class AssetUpdateRequest {
         return warrantyEndDate;
     }
 
-    public void setWarrantyEndDate(LocalDate warrantyEndDate) {
+    public void setWarrantyEndDate(
+            LocalDate warrantyEndDate
+    ) {
         this.warrantyEndDate = warrantyEndDate;
     }
 
@@ -258,7 +350,9 @@ public class AssetUpdateRequest {
         return vendorContractStart;
     }
 
-    public void setVendorContractStart(LocalDate vendorContractStart) {
+    public void setVendorContractStart(
+            LocalDate vendorContractStart
+    ) {
         this.vendorContractStart = vendorContractStart;
     }
 
@@ -266,78 +360,112 @@ public class AssetUpdateRequest {
         return vendorContractEnd;
     }
 
-    public void setVendorContractEnd(LocalDate vendorContractEnd) {
+    public void setVendorContractEnd(
+            LocalDate vendorContractEnd
+    ) {
         this.vendorContractEnd = vendorContractEnd;
     }
 
     // ============================================================
-    // UTILITY METHODS
+    // CHECK METHODS
     // ============================================================
 
-    /**
-     * Check if any field is set (not null)
-     */
     public boolean hasUpdates() {
-        return assetName != null || category != null || assetType != null ||
-                status != null || location != null || manufacturer != null ||
-                branch != null || serialNumber != null || modelNumber != null ||
-                description != null || dateOfInstallation != null || quantity != null ||
-                vendorId != null || vendorName != null || vendorEmail != null ||
-                vendorPhone != null || dlpEndDate != null || warrantyStartDate != null ||
-                warrantyEndDate != null || vendorContractStart != null || vendorContractEnd != null;
+
+        return assetName != null
+                || category != null
+                || assetType != null
+                || status != null
+                || location != null
+                || manufacturer != null
+                || branch != null
+                || serialNumber != null
+                || modelNumber != null
+                || description != null
+                || dateOfInstallation != null
+                || quantity != null
+                || assignedTo != null
+                || value != null
+                || vendorId != null
+                || vendorName != null
+                || vendorEmail != null
+                || vendorPhone != null
+                || dlpEndDate != null
+                || warrantyStartDate != null
+                || warrantyEndDate != null
+                || vendorContractStart != null
+                || vendorContractEnd != null;
     }
 
-    /**
-     * Check if basic information is being updated
-     */
     public boolean hasBasicInfoUpdates() {
-        return assetName != null || category != null || assetType != null ||
-                location != null || manufacturer != null || branch != null ||
-                serialNumber != null || modelNumber != null || description != null;
+
+        return assetName != null
+                || category != null
+                || assetType != null
+                || status != null
+                || location != null
+                || manufacturer != null
+                || branch != null
+                || serialNumber != null
+                || modelNumber != null
+                || description != null
+                || quantity != null
+                || assignedTo != null
+                || value != null;
     }
 
-    /**
-     * Check if vendor information is being updated
-     */
     public boolean hasVendorUpdates() {
-        return vendorId != null || vendorName != null ||
-                vendorEmail != null || vendorPhone != null;
+
+        return vendorId != null
+                || vendorName != null
+                || vendorEmail != null
+                || vendorPhone != null;
     }
 
-    /**
-     * Check if date-related fields are being updated
-     */
     public boolean hasDateUpdates() {
-        return dateOfInstallation != null || dlpEndDate != null ||
-                warrantyStartDate != null || warrantyEndDate != null ||
-                vendorContractStart != null || vendorContractEnd != null;
+
+        return dateOfInstallation != null
+                || dlpEndDate != null
+                || warrantyStartDate != null
+                || warrantyEndDate != null
+                || vendorContractStart != null
+                || vendorContractEnd != null;
     }
 
-    /**
-     * Validate warranty dates
-     */
     public boolean hasValidWarrantyDates() {
-        if (warrantyStartDate != null && warrantyEndDate != null) {
-            return !warrantyEndDate.isBefore(warrantyStartDate);
+
+        if (
+                warrantyStartDate != null
+                        && warrantyEndDate != null
+        ) {
+
+            return !warrantyEndDate.isBefore(
+                    warrantyStartDate
+            );
         }
+
         return true;
     }
 
-    /**
-     * Validate contract dates
-     */
     public boolean hasValidContractDates() {
-        if (vendorContractStart != null && vendorContractEnd != null) {
-            return !vendorContractEnd.isBefore(vendorContractStart);
+
+        if (
+                vendorContractStart != null
+                        && vendorContractEnd != null
+        ) {
+
+            return !vendorContractEnd.isBefore(
+                    vendorContractStart
+            );
         }
+
         return true;
     }
 
-    /**
-     * Get count of non-null fields
-     */
     public int getUpdateCount() {
+
         int count = 0;
+
         if (assetName != null) count++;
         if (category != null) count++;
         if (assetType != null) count++;
@@ -350,6 +478,8 @@ public class AssetUpdateRequest {
         if (description != null) count++;
         if (dateOfInstallation != null) count++;
         if (quantity != null) count++;
+        if (assignedTo != null) count++;
+        if (value != null) count++;
         if (vendorId != null) count++;
         if (vendorName != null) count++;
         if (vendorEmail != null) count++;
@@ -359,11 +489,12 @@ public class AssetUpdateRequest {
         if (warrantyEndDate != null) count++;
         if (vendorContractStart != null) count++;
         if (vendorContractEnd != null) count++;
+
         return count;
     }
 
     // ============================================================
-    // BUILDER PATTERN (OPTIONAL)
+    // BUILDER
     // ============================================================
 
     public static Builder builder() {
@@ -371,110 +502,122 @@ public class AssetUpdateRequest {
     }
 
     public static class Builder {
-        private final AssetUpdateRequest request = new AssetUpdateRequest();
 
-        public Builder assetName(String assetName) {
-            request.setAssetName(assetName);
+        private final AssetUpdateRequest request =
+                new AssetUpdateRequest();
+
+        public Builder assetName(String value) {
+            request.setAssetName(value);
             return this;
         }
 
-        public Builder category(String category) {
-            request.setCategory(category);
+        public Builder category(String value) {
+            request.setCategory(value);
             return this;
         }
 
-        public Builder assetType(String assetType) {
-            request.setAssetType(assetType);
+        public Builder assetType(String value) {
+            request.setAssetType(value);
             return this;
         }
 
-        public Builder status(AssetStatus status) {
-            request.setStatus(status);
+        public Builder status(AssetStatus value) {
+            request.setStatus(value);
             return this;
         }
 
-        public Builder location(String location) {
-            request.setLocation(location);
+        public Builder location(String value) {
+            request.setLocation(value);
             return this;
         }
 
-        public Builder manufacturer(String manufacturer) {
-            request.setManufacturer(manufacturer);
+        public Builder manufacturer(String value) {
+            request.setManufacturer(value);
             return this;
         }
 
-        public Builder branch(String branch) {
-            request.setBranch(branch);
+        public Builder branch(String value) {
+            request.setBranch(value);
             return this;
         }
 
-        public Builder serialNumber(String serialNumber) {
-            request.setSerialNumber(serialNumber);
+        public Builder serialNumber(String value) {
+            request.setSerialNumber(value);
             return this;
         }
 
-        public Builder modelNumber(String modelNumber) {
-            request.setModelNumber(modelNumber);
+        public Builder modelNumber(String value) {
+            request.setModelNumber(value);
             return this;
         }
 
-        public Builder description(String description) {
-            request.setDescription(description);
+        public Builder description(String value) {
+            request.setDescription(value);
             return this;
         }
 
-        public Builder dateOfInstallation(LocalDate dateOfInstallation) {
-            request.setDateOfInstallation(dateOfInstallation);
+        public Builder dateOfInstallation(LocalDate value) {
+            request.setDateOfInstallation(value);
             return this;
         }
 
-        public Builder quantity(Integer quantity) {
-            request.setQuantity(quantity);
+        public Builder quantity(Integer value) {
+            request.setQuantity(value);
             return this;
         }
 
-        public Builder vendorId(String vendorId) {
-            request.setVendorId(vendorId);
+        public Builder assignedTo(String value) {
+            request.setAssignedTo(value);
             return this;
         }
 
-        public Builder vendorName(String vendorName) {
-            request.setVendorName(vendorName);
+        public Builder value(BigDecimal value) {
+            request.setValue(value);
             return this;
         }
 
-        public Builder vendorEmail(String vendorEmail) {
-            request.setVendorEmail(vendorEmail);
+        public Builder vendorId(String value) {
+            request.setVendorId(value);
             return this;
         }
 
-        public Builder vendorPhone(String vendorPhone) {
-            request.setVendorPhone(vendorPhone);
+        public Builder vendorName(String value) {
+            request.setVendorName(value);
             return this;
         }
 
-        public Builder dlpEndDate(LocalDate dlpEndDate) {
-            request.setDlpEndDate(dlpEndDate);
+        public Builder vendorEmail(String value) {
+            request.setVendorEmail(value);
             return this;
         }
 
-        public Builder warrantyStartDate(LocalDate warrantyStartDate) {
-            request.setWarrantyStartDate(warrantyStartDate);
+        public Builder vendorPhone(String value) {
+            request.setVendorPhone(value);
             return this;
         }
 
-        public Builder warrantyEndDate(LocalDate warrantyEndDate) {
-            request.setWarrantyEndDate(warrantyEndDate);
+        public Builder dlpEndDate(LocalDate value) {
+            request.setDlpEndDate(value);
             return this;
         }
 
-        public Builder vendorContractStart(LocalDate vendorContractStart) {
-            request.setVendorContractStart(vendorContractStart);
+        public Builder warrantyStartDate(LocalDate value) {
+            request.setWarrantyStartDate(value);
             return this;
         }
 
-        public Builder vendorContractEnd(LocalDate vendorContractEnd) {
-            request.setVendorContractEnd(vendorContractEnd);
+        public Builder warrantyEndDate(LocalDate value) {
+            request.setWarrantyEndDate(value);
+            return this;
+        }
+
+        public Builder vendorContractStart(LocalDate value) {
+            request.setVendorContractStart(value);
+            return this;
+        }
+
+        public Builder vendorContractEnd(LocalDate value) {
+            request.setVendorContractEnd(value);
             return this;
         }
 
@@ -484,11 +627,12 @@ public class AssetUpdateRequest {
     }
 
     // ============================================================
-    // OBJECT METHODS
+    // TO STRING
     // ============================================================
 
     @Override
     public String toString() {
+
         return "AssetUpdateRequest{" +
                 "assetName='" + assetName + '\'' +
                 ", category='" + category + '\'' +
@@ -499,16 +643,20 @@ public class AssetUpdateRequest {
                 ", branch='" + branch + '\'' +
                 ", serialNumber='" + serialNumber + '\'' +
                 ", modelNumber='" + modelNumber + '\'' +
+                ", description='" + description + '\'' +
                 ", dateOfInstallation=" + dateOfInstallation +
                 ", quantity=" + quantity +
+                ", assignedTo='" + assignedTo + '\'' +
+                ", value=" + value +
                 ", vendorId='" + vendorId + '\'' +
                 ", vendorName='" + vendorName + '\'' +
+                ", vendorEmail='" + vendorEmail + '\'' +
+                ", vendorPhone='" + vendorPhone + '\'' +
                 ", dlpEndDate=" + dlpEndDate +
                 ", warrantyStartDate=" + warrantyStartDate +
                 ", warrantyEndDate=" + warrantyEndDate +
                 ", vendorContractStart=" + vendorContractStart +
                 ", vendorContractEnd=" + vendorContractEnd +
-                ", updateCount=" + getUpdateCount() +
                 '}';
     }
 }

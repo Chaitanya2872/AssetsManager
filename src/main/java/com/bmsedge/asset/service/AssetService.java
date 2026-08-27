@@ -19,633 +19,1184 @@ import java.util.stream.Collectors;
 @Transactional
 public class AssetService {
 
-    private static final Logger logger = LoggerFactory.getLogger(AssetService.class);
+    private static final Logger logger =
+            LoggerFactory.getLogger(AssetService.class);
 
     private final AssetRepository assetRepository;
     private final VendorRepository vendorRepository;
 
-    public AssetService(AssetRepository assetRepository,
-                        VendorRepository vendorRepository) {
+    public AssetService(
+            AssetRepository assetRepository,
+            VendorRepository vendorRepository
+    ) {
         this.assetRepository = assetRepository;
         this.vendorRepository = vendorRepository;
     }
 
+
     // ============================================================
-    // ASSET CRUD OPERATIONS
+    // ASSET CRUD
     // ============================================================
 
-    /**
-     * Create a new asset with basic information
-     */
-    public Asset create(String name, String category, String location) {
-        logger.info("Creating new asset: name={}, category={}, location={}", name, category, location);
+    public Asset create(
+            String name,
+            String category,
+            String location
+    ) {
+
+        if (name == null || name.isBlank()) {
+            throw new IllegalArgumentException(
+                    "Asset name is required"
+            );
+        }
+
+        if (category == null || category.isBlank()) {
+            throw new IllegalArgumentException(
+                    "Asset category is required"
+            );
+        }
+
+        logger.info(
+                "Creating asset: name={}, category={}, location={}",
+                name,
+                category,
+                location
+        );
 
         Asset asset = new Asset();
-        asset.setAssetName(name);
-        asset.setAssetCategory(category);
+
+        asset.setAssetName(name.trim());
+        asset.setAssetCategory(category.trim());
+        asset.setLocation(
+                location == null ? null : location.trim()
+        );
         asset.setStatus(AssetStatus.AVAILABLE);
-        asset.setLocation(location);
+        asset.setQuantity(1);
 
         Asset saved = assetRepository.save(asset);
-        logger.info("Asset created successfully with ID: {}", saved.getAssetId());
+
+        logger.info(
+                "Asset created successfully: {}",
+                saved.getAssetId()
+        );
 
         return saved;
     }
 
-    /**
-     * Get asset by ID
-     */
+
+    // ============================================================
+    // GET ASSET
+    // ============================================================
+
     @Transactional(readOnly = true)
     public Asset get(String id) {
-        logger.debug("Fetching asset with ID: {}", id);
+
+        if (id == null || id.isBlank()) {
+            throw new AssetNotFoundException(id);
+        }
+
         return assetRepository.findById(id)
                 .orElseThrow(() -> {
-                    logger.error("Asset not found with ID: {}", id);
+
+                    logger.error(
+                            "Asset not found: {}",
+                            id
+                    );
+
                     return new AssetNotFoundException(id);
                 });
     }
 
-    /**
-     * Get all assets
-     */
+
+    // ============================================================
+    // GET ALL
+    // ============================================================
+
     @Transactional(readOnly = true)
     public List<Asset> getAll() {
-        logger.debug("Fetching all assets");
+
         return assetRepository.findAll();
     }
 
-    /**
-     * Update asset with partial or full data
-     */
-    public Asset update(String id, Asset request) {
-        logger.info("Updating asset with ID: {}", id);
+
+    // ============================================================
+    // UPDATE ASSET
+    // ============================================================
+
+    public Asset update(
+            String id,
+            Asset request
+    ) {
+
+        if (request == null) {
+            throw new IllegalArgumentException(
+                    "Asset request cannot be null"
+            );
+        }
 
         Asset asset = get(id);
 
-        // Update basic information
+        // --------------------------------------------------------
+        // BASIC INFORMATION
+        // --------------------------------------------------------
+
         if (request.getAssetName() != null) {
-            asset.setAssetName(request.getAssetName());
+            asset.setAssetName(
+                    request.getAssetName().trim()
+            );
         }
+
         if (request.getAssetCategory() != null) {
-            asset.setAssetCategory(request.getAssetCategory());
+            asset.setAssetCategory(
+                    request.getAssetCategory().trim()
+            );
         }
+
         if (request.getAssetType() != null) {
-            asset.setAssetType(request.getAssetType());
+            asset.setAssetType(
+                    request.getAssetType().trim()
+            );
         }
+
         if (request.getStatus() != null) {
             asset.setStatus(request.getStatus());
         }
+
         if (request.getLocation() != null) {
-            asset.setLocation(request.getLocation());
+            asset.setLocation(
+                    request.getLocation().trim()
+            );
         }
+
         if (request.getManufacturer() != null) {
-            asset.setManufacturer(request.getManufacturer());
+            asset.setManufacturer(
+                    request.getManufacturer().trim()
+            );
         }
+
         if (request.getBranch() != null) {
-            asset.setBranch(request.getBranch());
+            asset.setBranch(
+                    request.getBranch().trim()
+            );
         }
+
+        // --------------------------------------------------------
+        // SERIAL NUMBER
+        // --------------------------------------------------------
+
         if (request.getSerialNumber() != null) {
-            asset.setSerialNumber(request.getSerialNumber());
+
+            String serialNumber =
+                    request.getSerialNumber().trim();
+
+            if (!serialNumber.isBlank()
+                    && assetRepository.existsBySerialNumberAndAssetIdNot(
+                    serialNumber,
+                    id
+            )) {
+
+                throw new IllegalArgumentException(
+                        "Serial number already exists: "
+                                + serialNumber
+                );
+            }
+
+            asset.setSerialNumber(
+                    serialNumber.isBlank()
+                            ? null
+                            : serialNumber
+            );
         }
+
+        // --------------------------------------------------------
+        // MODEL
+        // --------------------------------------------------------
+
         if (request.getModelNumber() != null) {
-            asset.setModelNumber(request.getModelNumber());
+            asset.setModelNumber(
+                    request.getModelNumber().trim()
+            );
         }
+
+        // --------------------------------------------------------
+        // DESCRIPTION
+        // --------------------------------------------------------
+
         if (request.getDescription() != null) {
-            asset.setDescription(request.getDescription());
+            asset.setDescription(
+                    request.getDescription()
+            );
         }
+
+        // --------------------------------------------------------
+        // INSTALLATION / QUANTITY
+        // --------------------------------------------------------
+
         if (request.getDateOfInstallation() != null) {
-            asset.setDateOfInstallation(request.getDateOfInstallation());
+            asset.setDateOfInstallation(
+                    request.getDateOfInstallation()
+            );
         }
+
         if (request.getQuantity() != null) {
-            asset.setQuantity(request.getQuantity());
+
+            if (request.getQuantity() < 1) {
+                throw new IllegalArgumentException(
+                        "Quantity must be greater than zero"
+                );
+            }
+
+            asset.setQuantity(
+                    request.getQuantity()
+            );
         }
 
-        // Update vendor information
+        // --------------------------------------------------------
+        // ASSIGNMENT
+        // --------------------------------------------------------
+
+        if (request.getAssignedTo() != null) {
+            asset.setAssignedTo(
+                    request.getAssignedTo().trim()
+            );
+        }
+
+        // --------------------------------------------------------
+        // VALUE
+        // --------------------------------------------------------
+
+        if (request.getValue() != null) {
+
+            if (request.getValue().signum() < 0) {
+                throw new IllegalArgumentException(
+                        "Asset value cannot be negative"
+                );
+            }
+
+            asset.setValue(
+                    request.getValue()
+            );
+        }
+
+        // --------------------------------------------------------
+        // VENDOR INFORMATION
+        // --------------------------------------------------------
+
         if (request.getVendorId() != null) {
-            asset.setVendorId(request.getVendorId());
+            asset.setVendorId(
+                    request.getVendorId().trim()
+            );
         }
+
         if (request.getVendorName() != null) {
-            asset.setVendorName(request.getVendorName());
+            asset.setVendorName(
+                    request.getVendorName().trim()
+            );
         }
+
         if (request.getVendorEmail() != null) {
-            asset.setVendorEmail(request.getVendorEmail());
+            asset.setVendorEmail(
+                    request.getVendorEmail().trim()
+            );
         }
+
         if (request.getVendorPhone() != null) {
-            asset.setVendorPhone(request.getVendorPhone());
+            asset.setVendorPhone(
+                    request.getVendorPhone().trim()
+            );
         }
 
-        // Update date-related fields
+        // --------------------------------------------------------
+        // DLP
+        // --------------------------------------------------------
+
         if (request.getDlpEndDate() != null) {
-            asset.setDlpEndDate(request.getDlpEndDate());
+            asset.setDlpEndDate(
+                    request.getDlpEndDate()
+            );
         }
+
+        // --------------------------------------------------------
+        // WARRANTY
+        // --------------------------------------------------------
+
         if (request.getWarrantyStartDate() != null) {
-            asset.setWarrantyStartDate(request.getWarrantyStartDate());
+            asset.setWarrantyStartDate(
+                    request.getWarrantyStartDate()
+            );
         }
+
         if (request.getWarrantyEndDate() != null) {
-            asset.setWarrantyEndDate(request.getWarrantyEndDate());
+            asset.setWarrantyEndDate(
+                    request.getWarrantyEndDate()
+            );
         }
+
+        // --------------------------------------------------------
+        // CONTRACT
+        // --------------------------------------------------------
+
         if (request.getVendorContractStart() != null) {
-            asset.setVendorContractStart(request.getVendorContractStart());
+            asset.setVendorContractStart(
+                    request.getVendorContractStart()
+            );
         }
+
         if (request.getVendorContractEnd() != null) {
-            asset.setVendorContractEnd(request.getVendorContractEnd());
+            asset.setVendorContractEnd(
+                    request.getVendorContractEnd()
+            );
         }
 
-        Asset saved = assetRepository.save(asset);
-        logger.info("Asset updated successfully: {}", id);
+        validateDates(asset);
 
-        return saved;
+        return assetRepository.save(asset);
     }
 
-    /**
-     * Update asset status
-     */
-    public Asset updateStatus(String id, AssetStatus status) {
-        logger.info("Updating status for asset {}: {}", id, status);
+
+    // ============================================================
+    // STATUS
+    // ============================================================
+
+    public Asset updateStatus(
+            String id,
+            AssetStatus status
+    ) {
+
+        if (status == null) {
+            throw new IllegalArgumentException(
+                    "Asset status is required"
+            );
+        }
 
         Asset asset = get(id);
+
         asset.setStatus(status);
 
         return assetRepository.save(asset);
     }
 
-    /**
-     * Delete asset
-     */
-    public void delete(String id) {
-        logger.info("Deleting asset with ID: {}", id);
 
-        if (!assetRepository.existsById(id)) {
-            logger.error("Asset not found with ID: {}", id);
-            throw new AssetNotFoundException(id);
+    // ============================================================
+    // DELETE
+    // ============================================================
+
+    public void delete(String id) {
+
+        Asset asset = get(id);
+
+        /*
+         * Remove vendor relationships first.
+         * This prevents many-to-many foreign-key problems.
+         */
+        if (asset.getVendors() != null
+                && !asset.getVendors().isEmpty()) {
+
+            for (Vendor vendor :
+                    new HashSet<>(asset.getVendors())) {
+
+                vendor.removeAsset(asset);
+                vendorRepository.save(vendor);
+            }
         }
 
-        assetRepository.deleteById(id);
-        logger.info("Asset deleted successfully: {}", id);
+        assetRepository.delete(asset);
+
+        logger.info(
+                "Asset deleted successfully: {}",
+                id
+        );
     }
+
 
     // ============================================================
-    // SEARCH & FILTER OPERATIONS
+    // SEARCH & FILTER
     // ============================================================
 
-    /**
-     * Search assets with multiple filters
-     */
     @Transactional(readOnly = true)
-    public List<Asset> searchAssets(String name, String category, AssetStatus status) {
-        logger.debug("Searching assets: name={}, category={}, status={}", name, category, status);
-        return assetRepository.findByFilters(name, category, status);
+    public List<Asset> searchAssets(
+            String name,
+            String category,
+            AssetStatus status
+    ) {
+
+        return assetRepository.findByFilters(
+                normalize(name),
+                normalize(category),
+                status,
+                null
+        );
     }
 
-    /**
-     * Get assets by category
-     */
+
     @Transactional(readOnly = true)
-    public List<Asset> getByCategory(String category) {
-        logger.debug("Fetching assets by category: {}", category);
-        return assetRepository.findByAssetCategory(category);
+    public List<Asset> searchAssets(
+            String name,
+            String category,
+            AssetStatus status,
+            String location
+    ) {
+
+        return assetRepository.findByFilters(
+                normalize(name),
+                normalize(category),
+                status,
+                normalize(location)
+        );
     }
 
-    /**
-     * Get assets by location
-     */
+
     @Transactional(readOnly = true)
-    public List<Asset> getAssetsByLocation(String location) {
-        logger.debug("Fetching assets by location: {}", location);
-        return assetRepository.findByLocation(location);
+    public List<Asset> searchByText(
+            String query
+    ) {
+
+        if (query == null || query.isBlank()) {
+            return getAll();
+        }
+
+        return assetRepository.searchAssets(
+                query.trim()
+        );
     }
 
-    /**
-     * Get assets by vendor ID
-     */
-    @Transactional(readOnly = true)
-    public List<Asset> getAssetsByVendor(String vendorId) {
-        logger.debug("Fetching assets by vendor: {}", vendorId);
-        return assetRepository.findByVendorId(vendorId);
-    }
-
-    /**
-     * Get assets by status
-     */
-    @Transactional(readOnly = true)
-    public List<Asset> getByStatus(AssetStatus status) {
-        logger.debug("Fetching assets by status: {}", status);
-        return assetRepository.findByStatus(status);
-    }
-
-    /**
-     * Get assets by branch
-     */
-    @Transactional(readOnly = true)
-    public List<Asset> getByBranch(String branch) {
-        logger.debug("Fetching assets by branch: {}", branch);
-        return assetRepository.findByBranch(branch);
-    }
-
-    /**
-     * Get assets by manufacturer
-     */
-    @Transactional(readOnly = true)
-    public List<Asset> getByManufacturer(String manufacturer) {
-        logger.debug("Fetching assets by manufacturer: {}", manufacturer);
-        return assetRepository.findByManufacturer(manufacturer);
-    }
 
     // ============================================================
-    // VENDOR RELATIONSHIP MANAGEMENT
+    // FILTER HELPERS
     // ============================================================
 
-    /**
-     * Assign vendor to asset (Many-to-Many)
-     */
-    public Asset assignVendor(String assetId, String vendorId) {
-        logger.info("Assigning vendor {} to asset {}", vendorId, assetId);
+    @Transactional(readOnly = true)
+    public List<Asset> getByCategory(
+            String category
+    ) {
+
+        return assetRepository.findByAssetCategory(
+                category
+        );
+    }
+
+
+    @Transactional(readOnly = true)
+    public List<Asset> getAssetsByLocation(
+            String location
+    ) {
+
+        return assetRepository.findByLocation(
+                location
+        );
+    }
+
+
+    @Transactional(readOnly = true)
+    public List<Asset> getAssetsByVendor(
+            String vendorId
+    ) {
+
+        return assetRepository.findByVendorId(
+                vendorId
+        );
+    }
+
+
+    @Transactional(readOnly = true)
+    public List<Asset> getByStatus(
+            AssetStatus status
+    ) {
+
+        return assetRepository.findByStatus(
+                status
+        );
+    }
+
+
+    @Transactional(readOnly = true)
+    public List<Asset> getByBranch(
+            String branch
+    ) {
+
+        return assetRepository.findByBranch(
+                branch
+        );
+    }
+
+
+    @Transactional(readOnly = true)
+    public List<Asset> getByManufacturer(
+            String manufacturer
+    ) {
+
+        return assetRepository.findByManufacturer(
+                manufacturer
+        );
+    }
+
+
+    // ============================================================
+    // VENDOR RELATIONSHIP
+    // ============================================================
+
+    public Asset assignVendor(
+            String assetId,
+            String vendorId
+    ) {
 
         Asset asset = get(assetId);
-        Vendor vendor = vendorRepository.findById(vendorId)
-                .orElseThrow(() -> new RuntimeException("Vendor not found: " + vendorId));
 
-        vendor.addAsset(asset); // Helper keeps both sides in sync
+        Vendor vendor =
+                vendorRepository.findById(vendorId)
+                        .orElseThrow(() ->
+                                new IllegalArgumentException(
+                                        "Vendor not found: "
+                                                + vendorId
+                                )
+                        );
+
+        vendor.addAsset(asset);
+
+        // Keep the denormalized vendor fields in sync.
+        asset.setVendorId(
+                vendor.getVendorId()
+        );
+
+        asset.setVendorName(
+                vendor.getVendorName()
+        );
+
+        asset.setVendorEmail(
+                vendor.getVendorEmail()
+        );
+
+        asset.setVendorPhone(
+                vendor.getVendorPhone()
+        );
+
         vendorRepository.save(vendor);
+        assetRepository.save(asset);
 
-        logger.info("Vendor assigned successfully");
         return asset;
     }
 
-    /**
-     * Remove vendor from asset
-     */
-    public Asset removeVendor(String assetId, String vendorId) {
-        logger.info("Removing vendor {} from asset {}", vendorId, assetId);
+
+    public Asset removeVendor(
+            String assetId,
+            String vendorId
+    ) {
 
         Asset asset = get(assetId);
-        Vendor vendor = vendorRepository.findById(vendorId)
-                .orElseThrow(() -> new RuntimeException("Vendor not found: " + vendorId));
+
+        Vendor vendor =
+                vendorRepository.findById(vendorId)
+                        .orElseThrow(() ->
+                                new IllegalArgumentException(
+                                        "Vendor not found: "
+                                                + vendorId
+                                )
+                        );
 
         vendor.removeAsset(asset);
+
+        /*
+         * Clear the denormalized vendor fields only when
+         * this vendor is actually being removed.
+         */
+        if (Objects.equals(
+                asset.getVendorId(),
+                vendorId
+        )) {
+
+            asset.setVendorId(null);
+            asset.setVendorName(null);
+            asset.setVendorEmail(null);
+            asset.setVendorPhone(null);
+        }
+
         vendorRepository.save(vendor);
 
-        logger.info("Vendor removed successfully");
-        return asset;
+        return assetRepository.save(asset);
     }
 
-    /**
-     * Bulk assign vendor to multiple assets
-     */
-    public int bulkAssignVendor(List<String> assetIds, String vendorId, String vendorName,
-                                String vendorEmail, String vendorPhone) {
-        logger.info("Bulk assigning vendor {} to {} assets", vendorId, assetIds.size());
+
+    // ============================================================
+    // BULK VENDOR ASSIGNMENT
+    // ============================================================
+
+    public int bulkAssignVendor(
+            List<String> assetIds,
+            String vendorId,
+            String vendorName,
+            String vendorEmail,
+            String vendorPhone
+    ) {
+
+        if (assetIds == null || assetIds.isEmpty()) {
+            return 0;
+        }
 
         int count = 0;
 
         for (String assetId : assetIds) {
+
+            if (assetId == null || assetId.isBlank()) {
+                continue;
+            }
+
             try {
+
                 Asset asset = get(assetId);
-                asset.setVendorId(vendorId);
-                asset.setVendorName(vendorName);
-                asset.setVendorEmail(vendorEmail);
-                asset.setVendorPhone(vendorPhone);
+
+                asset.setVendorId(
+                        normalize(vendorId)
+                );
+
+                asset.setVendorName(
+                        normalize(vendorName)
+                );
+
+                asset.setVendorEmail(
+                        normalize(vendorEmail)
+                );
+
+                asset.setVendorPhone(
+                        normalize(vendorPhone)
+                );
+
                 assetRepository.save(asset);
+
                 count++;
+
             } catch (Exception e) {
-                logger.error("Failed to assign vendor to asset {}: {}", assetId, e.getMessage());
+
+                logger.error(
+                        "Failed to assign vendor to asset {}: {}",
+                        assetId,
+                        e.getMessage()
+                );
             }
         }
 
-        logger.info("Bulk vendor assignment completed: {} of {} assets updated", count, assetIds.size());
         return count;
     }
 
+
     // ============================================================
-    // VENDOR LOOKUPS & STATISTICS
+    // VENDOR LOOKUP
     // ============================================================
 
-    /**
-     * Get vendor lookup list (distinct vendors from assets)
-     */
     @Transactional(readOnly = true)
     public List<Map<String, Object>> getVendorLookup() {
-        logger.debug("Fetching vendor lookup list");
 
-        return assetRepository.findAll().stream()
-                .filter(a -> a.getVendorId() != null)
-                .collect(Collectors.groupingBy(Asset::getVendorId))
-                .entrySet().stream()
-                .map(entry -> {
-                    Asset firstAsset = entry.getValue().get(0);
-                    Map<String, Object> map = new HashMap<>();
-                    map.put("vendorId", firstAsset.getVendorId());
-                    map.put("vendorName", firstAsset.getVendorName());
-                    map.put("vendorEmail", firstAsset.getVendorEmail());
-                    map.put("vendorPhone", firstAsset.getVendorPhone());
+        return assetRepository
+                .getVendorStatistics()
+                .stream()
+                .map(row -> {
+
+                    Map<String, Object> map =
+                            new LinkedHashMap<>();
+
+                    map.put("vendorId", row[0]);
+                    map.put("vendorName", row[1]);
+                    map.put("vendorEmail", row[2]);
+                    map.put("vendorPhone", row[3]);
+                    map.put("assetCount", row[4]);
+
                     return map;
                 })
                 .collect(Collectors.toList());
     }
 
-    /**
-     * Get vendor statistics
-     */
+
+    // ============================================================
+    // VENDOR STATISTICS
+    // ============================================================
+
     @Transactional(readOnly = true)
     public List<Map<String, Object>> getVendorStats() {
-        logger.debug("Fetching vendor statistics");
 
-        return assetRepository.findAll().stream()
-                .filter(a -> a.getVendorId() != null)
-                .collect(Collectors.groupingBy(Asset::getVendorId))
-                .entrySet().stream()
-                .map(entry -> {
-                    Asset firstAsset = entry.getValue().get(0);
-                    Map<String, Object> map = new HashMap<>();
-                    map.put("vendorId", firstAsset.getVendorId());
-                    map.put("vendorName", firstAsset.getVendorName());
-                    map.put("vendorEmail", firstAsset.getVendorEmail());
-                    map.put("assetCount", entry.getValue().size());
+        return assetRepository
+                .getVendorStatistics()
+                .stream()
+                .map(row -> {
+
+                    Map<String, Object> map =
+                            new LinkedHashMap<>();
+
+                    map.put("vendorId", row[0]);
+                    map.put("vendorName", row[1]);
+                    map.put("vendorEmail", row[2]);
+                    map.put("vendorPhone", row[3]);
+                    map.put("assetCount", row[4]);
+
                     return map;
                 })
                 .collect(Collectors.toList());
     }
 
+
     // ============================================================
-    // DLP ALERT SYSTEM
+    // DLP ALERTS
     // ============================================================
 
-    /**
-     * Get DLP alert dashboard
-     */
     @Transactional(readOnly = true)
     public Map<String, Object> getDlpAlertDashboard() {
-        logger.debug("Fetching DLP alert dashboard");
 
-        Map<String, Object> dashboard = new HashMap<>();
-        dashboard.put("expired", getDlpExpired());
-        dashboard.put("critical", getDlpExpiringIn7Days());
-        dashboard.put("warning", getDlpExpiringIn30Days());
-        dashboard.put("counts", getDlpAlertCounts());
+        Map<String, Object> dashboard =
+                new LinkedHashMap<>();
+
+        dashboard.put(
+                "expired",
+                getDlpExpired()
+        );
+
+        dashboard.put(
+                "critical",
+                getDlpExpiringIn7Days()
+        );
+
+        dashboard.put(
+                "warning",
+                getDlpExpiringIn30Days()
+        );
+
+        dashboard.put(
+                "counts",
+                getDlpAlertCounts()
+        );
 
         return dashboard;
     }
 
-    /**
-     * Get assets with expired DLP
-     */
+
     @Transactional(readOnly = true)
     public List<Asset> getDlpExpired() {
-        logger.debug("Fetching expired DLP assets");
+
         return assetRepository.findDlpExpired();
     }
 
-    /**
-     * Get assets with DLP expiring within specified days
-     */
+
     @Transactional(readOnly = true)
-    public List<Asset> getDlpExpiringWithin(int days) {
-        logger.debug("Fetching DLP expiring within {} days", days);
-        LocalDate endDate = LocalDate.now().plusDays(days);
-        return assetRepository.findDlpExpiringBetween(endDate);
+    public List<Asset> getDlpExpiringWithin(
+            int days
+    ) {
+
+        if (days < 0) {
+            throw new IllegalArgumentException(
+                    "Days cannot be negative"
+            );
+        }
+
+        LocalDate endDate =
+                LocalDate.now().plusDays(days);
+
+        return assetRepository.findDlpExpiringBetween(
+                endDate
+        );
     }
 
-    /**
-     * Get assets with DLP expiring in next 7 days (critical)
-     */
+
     @Transactional(readOnly = true)
     public List<Asset> getDlpExpiringIn7Days() {
+
         return getDlpExpiringWithin(7);
     }
 
-    /**
-     * Get assets with DLP expiring in next 30 days
-     */
+
     @Transactional(readOnly = true)
     public List<Asset> getDlpExpiringIn30Days() {
+
         return getDlpExpiringWithin(30);
     }
 
-    /**
-     * Get DLP alert counts by level
-     */
+
     @Transactional(readOnly = true)
     public Map<String, Long> getDlpAlertCounts() {
-        logger.debug("Fetching DLP alert counts");
 
-        Map<String, Long> counts = new HashMap<>();
-        counts.put("expired", (long) getDlpExpired().size());
-        counts.put("critical", (long) getDlpExpiringIn7Days().size());
-        counts.put("warning", (long) getDlpExpiringIn30Days().size());
+        Map<String, Long> counts =
+                new LinkedHashMap<>();
+
+        counts.put(
+                "expired",
+                (long) getDlpExpired().size()
+        );
+
+        counts.put(
+                "critical",
+                (long) getDlpExpiringIn7Days().size()
+        );
+
+        counts.put(
+                "warning",
+                (long) getDlpExpiringIn30Days().size()
+        );
 
         return counts;
     }
 
-    /**
-     * Update DLP end date for an asset
-     */
-    public Asset updateDlpEndDate(String assetId, LocalDate dlpEndDate) {
-        logger.info("Updating DLP end date for asset {}: {}", assetId, dlpEndDate);
+
+    public Asset updateDlpEndDate(
+            String assetId,
+            LocalDate dlpEndDate
+    ) {
 
         Asset asset = get(assetId);
+
         asset.setDlpEndDate(dlpEndDate);
 
         return assetRepository.save(asset);
     }
 
-    /**
-     * Check if asset has expired DLP
-     */
+
     @Transactional(readOnly = true)
-    public boolean hasExpiredDlp(String assetId) {
+    public boolean hasExpiredDlp(
+            String assetId
+    ) {
+
         return get(assetId).isDlpExpired();
     }
 
-    /**
-     * Get DLP alert level for an asset
-     */
+
     @Transactional(readOnly = true)
-    public Asset.DlpAlertLevel getDlpAlertLevel(String assetId) {
+    public Asset.DlpAlertLevel getDlpAlertLevel(
+            String assetId
+    ) {
+
         return get(assetId).getDlpAlertLevel();
     }
 
+
     // ============================================================
-    // WARRANTY ALERT SYSTEM
+    // WARRANTY
     // ============================================================
 
-    /**
-     * Get assets with expired warranty
-     */
     @Transactional(readOnly = true)
     public List<Asset> getWarrantyExpired() {
-        logger.debug("Fetching expired warranty assets");
+
         return assetRepository.findWarrantyExpired();
     }
 
-    /**
-     * Get assets with warranty expiring within specified days
-     */
+
     @Transactional(readOnly = true)
-    public List<Asset> getWarrantyExpiringWithin(int days) {
-        logger.debug("Fetching warranty expiring within {} days", days);
-        LocalDate endDate = LocalDate.now().plusDays(days);
-        return assetRepository.findWarrantyExpiringBefore(endDate);
+    public List<Asset> getWarrantyExpiringWithin(
+            int days
+    ) {
+
+        if (days < 0) {
+            throw new IllegalArgumentException(
+                    "Days cannot be negative"
+            );
+        }
+
+        LocalDate endDate =
+                LocalDate.now().plusDays(days);
+
+        return assetRepository.findWarrantyExpiringBefore(
+                endDate
+        );
     }
 
-    /**
-     * Update warranty dates for an asset
-     */
-    public Asset updateWarranty(String assetId, LocalDate start, LocalDate end) {
-        logger.info("Updating warranty for asset {}: {} to {}", assetId, start, end);
+
+    public Asset updateWarranty(
+            String assetId,
+            LocalDate start,
+            LocalDate end
+    ) {
+
+        validateDateRange(
+                start,
+                end,
+                "Warranty"
+        );
 
         Asset asset = get(assetId);
+
         asset.setWarrantyStartDate(start);
         asset.setWarrantyEndDate(end);
 
         return assetRepository.save(asset);
     }
 
+
     // ============================================================
-    // VENDOR CONTRACT ALERT SYSTEM
+    // VENDOR CONTRACT
     // ============================================================
 
-    /**
-     * Get assets with expired vendor contracts
-     */
     @Transactional(readOnly = true)
     public List<Asset> getVendorContractExpired() {
-        logger.debug("Fetching expired vendor contracts");
+
         return assetRepository.findContractExpired();
     }
 
-    /**
-     * Get assets with vendor contract expiring within specified days
-     */
+
     @Transactional(readOnly = true)
-    public List<Asset> getVendorContractExpiringWithin(int days) {
-        logger.debug("Fetching vendor contracts expiring within {} days", days);
-        LocalDate endDate = LocalDate.now().plusDays(days);
-        return assetRepository.findContractExpiringBefore(endDate);
+    public List<Asset> getVendorContractExpiringWithin(
+            int days
+    ) {
+
+        if (days < 0) {
+            throw new IllegalArgumentException(
+                    "Days cannot be negative"
+            );
+        }
+
+        LocalDate endDate =
+                LocalDate.now().plusDays(days);
+
+        return assetRepository.findContractExpiringBefore(
+                endDate
+        );
     }
 
-    /**
-     * Update vendor contract dates for an asset
-     */
-    public Asset updateVendorContract(String assetId, LocalDate start, LocalDate end) {
-        logger.info("Updating vendor contract for asset {}: {} to {}", assetId, start, end);
+
+    public Asset updateVendorContract(
+            String assetId,
+            LocalDate start,
+            LocalDate end
+    ) {
+
+        validateDateRange(
+                start,
+                end,
+                "Vendor contract"
+        );
 
         Asset asset = get(assetId);
+
         asset.setVendorContractStart(start);
         asset.setVendorContractEnd(end);
 
         return assetRepository.save(asset);
     }
 
+
     // ============================================================
-    // LOOKUPS FOR DROPDOWNS
+    // LOOKUPS
     // ============================================================
 
-    /**
-     * Get distinct categories
-     */
     @Transactional(readOnly = true)
     public List<String> getDistinctCategories() {
-        logger.debug("Fetching distinct categories");
+
         return assetRepository.findDistinctCategories();
     }
 
-    /**
-     * Get distinct locations
-     */
+
     @Transactional(readOnly = true)
     public List<String> getDistinctLocations() {
-        logger.debug("Fetching distinct locations");
+
         return assetRepository.findDistinctLocations();
     }
 
-    /**
-     * Get distinct branches
-     */
+
     @Transactional(readOnly = true)
     public List<String> getDistinctBranches() {
-        logger.debug("Fetching distinct branches");
+
         return assetRepository.findDistinctBranches();
     }
 
-    /**
-     * Get distinct manufacturers
-     */
+
     @Transactional(readOnly = true)
     public List<String> getDistinctManufacturers() {
-        logger.debug("Fetching distinct manufacturers");
+
         return assetRepository.findDistinctManufacturers();
     }
 
+
     // ============================================================
-    // STATISTICS & ANALYTICS
+    // VENDOR IDS
     // ============================================================
 
-    /**
-     * Get total asset count
-     */
+    @Transactional(readOnly = true)
+    public List<String> getDistinctVendorIds() {
+
+        return assetRepository.findDistinctVendorIds();
+    }
+
+
+    // ============================================================
+    // STATISTICS
+    // ============================================================
+
     @Transactional(readOnly = true)
     public long getTotalAssetCount() {
+
         return assetRepository.count();
     }
 
-    /**
-     * Get asset count by status
-     */
+
     @Transactional(readOnly = true)
-    public long getAssetCountByStatus(AssetStatus status) {
+    public long getAssetCountByStatus(
+            AssetStatus status
+    ) {
+
         return assetRepository.countByStatus(status);
     }
 
-    /**
-     * Get asset count by category
-     */
+
     @Transactional(readOnly = true)
-    public long getAssetCountByCategory(String category) {
-        return assetRepository.countByAssetCategory(category);
+    public long getAssetCountByCategory(
+            String category
+    ) {
+
+        return assetRepository.countByAssetCategory(
+                category
+        );
     }
 
-    /**
-     * Get asset count by location
-     */
+
     @Transactional(readOnly = true)
-    public long getAssetCountByLocation(String location) {
-        return assetRepository.countByLocation(location);
+    public long getAssetCountByLocation(
+            String location
+    ) {
+
+        return assetRepository.countByLocation(
+                location
+        );
     }
 
-    /**
-     * Get asset count by vendor
-     */
+
     @Transactional(readOnly = true)
-    public long getAssetCountByVendor(String vendorId) {
-        return assetRepository.countByVendorId(vendorId);
+    public long getAssetCountByVendor(
+            String vendorId
+    ) {
+
+        return assetRepository.countByVendorId(
+                vendorId
+        );
     }
+
+
+    @Transactional(readOnly = true)
+    public long getAssignedAssetCount() {
+
+        return assetRepository.countAssignedAssets();
+    }
+
+
+    @Transactional(readOnly = true)
+    public long getUnassignedAssetCount() {
+
+        return assetRepository.countUnassignedAssets();
+    }
+
 
     // ============================================================
-    // VALIDATION & BUSINESS LOGIC
+    // VALIDATION
     // ============================================================
 
-    /**
-     * Check if serial number exists
-     */
     @Transactional(readOnly = true)
-    public boolean serialNumberExists(String serialNumber) {
-        return assetRepository.findBySerialNumber(serialNumber).isPresent();
+    public boolean serialNumberExists(
+            String serialNumber
+    ) {
+
+        if (serialNumber == null
+                || serialNumber.isBlank()) {
+
+            return false;
+        }
+
+        return assetRepository.existsBySerialNumber(
+                serialNumber.trim()
+        );
     }
 
-    /**
-     * Check if asset exists
-     */
+
     @Transactional(readOnly = true)
-    public boolean exists(String assetId) {
-        return assetRepository.existsById(assetId);
+    public boolean serialNumberExistsForAnotherAsset(
+            String serialNumber,
+            String assetId
+    ) {
+
+        if (serialNumber == null
+                || serialNumber.isBlank()) {
+
+            return false;
+        }
+
+        return assetRepository
+                .existsBySerialNumberAndAssetIdNot(
+                        serialNumber.trim(),
+                        assetId
+                );
     }
 
-    /**
-     * Validate asset for creation/update
-     */
-    public boolean isValidAsset(Asset asset) {
-        return asset != null &&
-                asset.getAssetName() != null && !asset.getAssetName().isBlank() &&
-                asset.getAssetCategory() != null && !asset.getAssetCategory().isBlank();
+
+    @Transactional(readOnly = true)
+    public boolean exists(
+            String assetId
+    ) {
+
+        return assetId != null
+                && !assetId.isBlank()
+                && assetRepository.existsById(assetId);
+    }
+
+
+    public boolean isValidAsset(
+            Asset asset
+    ) {
+
+        return asset != null
+                && asset.getAssetName() != null
+                && !asset.getAssetName().isBlank()
+                && asset.getAssetCategory() != null
+                && !asset.getAssetCategory().isBlank();
+    }
+
+
+    // ============================================================
+    // INTERNAL VALIDATION HELPERS
+    // ============================================================
+
+    private String normalize(String value) {
+
+        if (value == null) {
+            return null;
+        }
+
+        String normalized = value.trim();
+
+        return normalized.isBlank()
+                ? null
+                : normalized;
+    }
+
+
+    private void validateDates(Asset asset) {
+
+        if (asset.getWarrantyStartDate() != null
+                && asset.getWarrantyEndDate() != null
+                && asset.getWarrantyEndDate()
+                .isBefore(asset.getWarrantyStartDate())) {
+
+            throw new IllegalArgumentException(
+                    "Warranty end date cannot be before warranty start date"
+            );
+        }
+
+        if (asset.getVendorContractStart() != null
+                && asset.getVendorContractEnd() != null
+                && asset.getVendorContractEnd()
+                .isBefore(asset.getVendorContractStart())) {
+
+            throw new IllegalArgumentException(
+                    "Vendor contract end date cannot be before start date"
+            );
+        }
+    }
+
+
+    private void validateDateRange(
+            LocalDate start,
+            LocalDate end,
+            String fieldName
+    ) {
+
+        if (start != null
+                && end != null
+                && end.isBefore(start)) {
+
+            throw new IllegalArgumentException(
+                    fieldName
+                            + " end date cannot be before start date"
+            );
+        }
     }
 }

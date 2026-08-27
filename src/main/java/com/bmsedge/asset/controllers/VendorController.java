@@ -4,17 +4,20 @@ import com.bmsedge.asset.dto.VendorCreateRequest;
 import com.bmsedge.asset.dto.VendorUpdateRequest;
 import com.bmsedge.asset.model.Asset;
 import com.bmsedge.asset.model.Vendor;
+import com.bmsedge.asset.model.VendorStatus;
 import com.bmsedge.asset.service.VendorService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 @RestController
 @RequestMapping("/api/vendors")
-@CrossOrigin(origins = "*")
 public class VendorController {
 
     private final VendorService vendorService;
@@ -23,16 +26,25 @@ public class VendorController {
         this.vendorService = vendorService;
     }
 
-    // ===================== VENDOR CRUD =====================
+    // ============================================================
+    // VENDOR CRUD
+    // ============================================================
 
     /**
-     * Create new vendor
+     * Create vendor
      * POST /api/vendors
      */
     @PostMapping
-    public ResponseEntity<Vendor> create(@Valid @RequestBody VendorCreateRequest request) {
-        Vendor vendor = vendorService.create(request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(vendor);
+    public ResponseEntity<Vendor> create(
+            @Valid @RequestBody VendorCreateRequest request
+    ) {
+
+        Vendor vendor =
+                vendorService.create(request);
+
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(vendor);
     }
 
     /**
@@ -40,9 +52,13 @@ public class VendorController {
      * GET /api/vendors/{id}
      */
     @GetMapping("/{id}")
-    public ResponseEntity<Vendor> get(@PathVariable String id) {
-        Vendor vendor = vendorService.get(id);
-        return ResponseEntity.ok(vendor);
+    public ResponseEntity<Vendor> get(
+            @PathVariable String id
+    ) {
+
+        return ResponseEntity.ok(
+                vendorService.get(id)
+        );
     }
 
     /**
@@ -50,9 +66,13 @@ public class VendorController {
      * GET /api/vendors/email/{email}
      */
     @GetMapping("/email/{email}")
-    public ResponseEntity<Vendor> getByEmail(@PathVariable String email) {
-        Vendor vendor = vendorService.getByEmail(email);
-        return ResponseEntity.ok(vendor);
+    public ResponseEntity<Vendor> getByEmail(
+            @PathVariable String email
+    ) {
+
+        return ResponseEntity.ok(
+                vendorService.getByEmail(email)
+        );
     }
 
     /**
@@ -61,8 +81,10 @@ public class VendorController {
      */
     @GetMapping
     public ResponseEntity<List<Vendor>> getAll() {
-        List<Vendor> vendors = vendorService.getAll();
-        return ResponseEntity.ok(vendors);
+
+        return ResponseEntity.ok(
+                vendorService.getAll()
+        );
     }
 
     /**
@@ -70,19 +92,27 @@ public class VendorController {
      * GET /api/vendors/status/{status}
      */
     @GetMapping("/status/{status}")
-    public ResponseEntity<List<Vendor>> getByStatus(@PathVariable String status) {
-        List<Vendor> vendors = vendorService.getByStatus(status);
-        return ResponseEntity.ok(vendors);
+    public ResponseEntity<List<Vendor>> getByStatus(
+            @PathVariable String status
+    ) {
+
+        return ResponseEntity.ok(
+                vendorService.getByStatus(status)
+        );
     }
 
     /**
      * Search vendors
-     * GET /api/vendors/search?q={query}
+     * GET /api/vendors/search?q=abc
      */
     @GetMapping("/search")
-    public ResponseEntity<List<Vendor>> search(@RequestParam("q") String query) {
-        List<Vendor> vendors = vendorService.search(query);
-        return ResponseEntity.ok(vendors);
+    public ResponseEntity<List<Vendor>> search(
+            @RequestParam("q") String query
+    ) {
+
+        return ResponseEntity.ok(
+                vendorService.search(query)
+        );
     }
 
     /**
@@ -90,9 +120,13 @@ public class VendorController {
      * GET /api/vendors/asset/{assetId}
      */
     @GetMapping("/asset/{assetId}")
-    public ResponseEntity<List<Vendor>> getByAssetId(@PathVariable String assetId) {
-        List<Vendor> vendors = vendorService.getByAssetId(assetId);
-        return ResponseEntity.ok(vendors);
+    public ResponseEntity<List<Vendor>> getByAssetId(
+            @PathVariable String assetId
+    ) {
+
+        return ResponseEntity.ok(
+                vendorService.getByAssetId(assetId)
+        );
     }
 
     /**
@@ -102,32 +136,53 @@ public class VendorController {
     @PutMapping("/{id}")
     public ResponseEntity<Vendor> update(
             @PathVariable String id,
-            @Valid @RequestBody VendorUpdateRequest request) {
-        Vendor vendor = vendorService.update(id, request);
+            @Valid @RequestBody VendorUpdateRequest request
+    ) {
+
+        Vendor vendor =
+                vendorService.update(
+                        id,
+                        request
+                );
+
         return ResponseEntity.ok(vendor);
     }
 
     /**
      * Update vendor status
-     * PATCH /api/vendors/{id}/status
+     * PATCH /api/vendors/{id}/status?status=ACTIVE
      */
     @PatchMapping("/{id}/status")
     public ResponseEntity<Vendor> updateStatus(
             @PathVariable String id,
-            @RequestParam String status) {
-        Vendor vendor = vendorService.updateStatus(id, status);
+            @RequestParam String status
+    ) {
+
+        Vendor vendor =
+                vendorService.updateStatus(
+                        id,
+                        status
+                );
+
         return ResponseEntity.ok(vendor);
     }
 
     /**
      * Update vendor rating
-     * PATCH /api/vendors/{id}/rating
+     * PATCH /api/vendors/{id}/rating?rating=4.5
      */
     @PatchMapping("/{id}/rating")
     public ResponseEntity<Vendor> updateRating(
             @PathVariable String id,
-            @RequestParam Double rating) {
-        Vendor vendor = vendorService.updateRating(id, rating);
+            @RequestParam Double rating
+    ) {
+
+        Vendor vendor =
+                vendorService.updateRating(
+                        id,
+                        rating
+                );
+
         return ResponseEntity.ok(vendor);
     }
 
@@ -136,12 +191,18 @@ public class VendorController {
      * DELETE /api/vendors/{id}
      */
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable String id) {
+    public ResponseEntity<Void> delete(
+            @PathVariable String id
+    ) {
+
         vendorService.delete(id);
+
         return ResponseEntity.noContent().build();
     }
 
-    // ===================== ASSET RELATIONSHIP =====================
+    // ============================================================
+    // ASSET RELATIONSHIP
+    // ============================================================
 
     /**
      * Add asset to vendor
@@ -150,8 +211,15 @@ public class VendorController {
     @PostMapping("/{vendorId}/assets/{assetId}")
     public ResponseEntity<Vendor> addAsset(
             @PathVariable String vendorId,
-            @PathVariable String assetId) {
-        Vendor vendor = vendorService.addAsset(vendorId, assetId);
+            @PathVariable String assetId
+    ) {
+
+        Vendor vendor =
+                vendorService.addAsset(
+                        vendorId,
+                        assetId
+                );
+
         return ResponseEntity.ok(vendor);
     }
 
@@ -162,113 +230,260 @@ public class VendorController {
     @DeleteMapping("/{vendorId}/assets/{assetId}")
     public ResponseEntity<Vendor> removeAsset(
             @PathVariable String vendorId,
-            @PathVariable String assetId) {
-        Vendor vendor = vendorService.removeAsset(vendorId, assetId);
+            @PathVariable String assetId
+    ) {
+
+        Vendor vendor =
+                vendorService.removeAsset(
+                        vendorId,
+                        assetId
+                );
+
         return ResponseEntity.ok(vendor);
     }
 
     /**
-     * Bulk add assets to vendor
+     * Bulk add assets
      * POST /api/vendors/{vendorId}/assets/bulk
      */
     @PostMapping("/{vendorId}/assets/bulk")
     public ResponseEntity<Map<String, Object>> bulkAddAssets(
             @PathVariable String vendorId,
-            @RequestBody List<String> assetIds) {
-        Vendor vendor = vendorService.bulkAddAssets(vendorId, assetIds);
+            @RequestBody List<String> assetIds
+    ) {
 
-        Map<String, Object> response = new HashMap<>();
-        response.put("success", true);
-        response.put("vendorId", vendor.getVendorId());
-        response.put("totalAssets", vendor.getAssets().size());
-        response.put("addedCount", assetIds.size());
+        if (assetIds == null) {
+            assetIds = List.of();
+        }
+
+        Vendor vendor =
+                vendorService.bulkAddAssets(
+                        vendorId,
+                        assetIds
+                );
+
+        Map<String, Object> response =
+                new HashMap<>();
+
+        response.put(
+                "success",
+                true
+        );
+
+        response.put(
+                "vendorId",
+                vendor.getVendorId()
+        );
+
+        response.put(
+                "totalAssets",
+                vendor.getAssets() == null
+                        ? 0
+                        : vendor.getAssets().size()
+        );
+
+        response.put(
+                "addedCount",
+                assetIds.size()
+        );
 
         return ResponseEntity.ok(response);
     }
 
     /**
-     * Bulk remove assets from vendor
+     * Bulk remove assets
      * DELETE /api/vendors/{vendorId}/assets/bulk
      */
     @DeleteMapping("/{vendorId}/assets/bulk")
     public ResponseEntity<Map<String, Object>> bulkRemoveAssets(
             @PathVariable String vendorId,
-            @RequestBody List<String> assetIds) {
-        Vendor vendor = vendorService.bulkRemoveAssets(vendorId, assetIds);
+            @RequestBody List<String> assetIds
+    ) {
 
-        Map<String, Object> response = new HashMap<>();
-        response.put("success", true);
-        response.put("vendorId", vendor.getVendorId());
-        response.put("totalAssets", vendor.getAssets().size());
-        response.put("removedCount", assetIds.size());
+        if (assetIds == null) {
+            assetIds = List.of();
+        }
+
+        Vendor vendor =
+                vendorService.bulkRemoveAssets(
+                        vendorId,
+                        assetIds
+                );
+
+        Map<String, Object> response =
+                new HashMap<>();
+
+        response.put(
+                "success",
+                true
+        );
+
+        response.put(
+                "vendorId",
+                vendor.getVendorId()
+        );
+
+        response.put(
+                "totalAssets",
+                vendor.getAssets() == null
+                        ? 0
+                        : vendor.getAssets().size()
+        );
+
+        response.put(
+                "removedCount",
+                assetIds.size()
+        );
 
         return ResponseEntity.ok(response);
     }
 
     /**
-     * Get all assets for a vendor
+     * Get all assets for vendor
      * GET /api/vendors/{vendorId}/assets
      */
     @GetMapping("/{vendorId}/assets")
-    public ResponseEntity<Set<Asset>> getVendorAssets(@PathVariable String vendorId) {
-        Set<Asset> assets = vendorService.getVendorAssets(vendorId);
-        return ResponseEntity.ok(assets);
+    public ResponseEntity<Set<Asset>> getVendorAssets(
+            @PathVariable String vendorId
+    ) {
+
+        return ResponseEntity.ok(
+                vendorService.getVendorAssets(vendorId)
+        );
     }
 
     /**
-     * Get asset count for a vendor
+     * Get asset count
      * GET /api/vendors/{vendorId}/assets/count
      */
     @GetMapping("/{vendorId}/assets/count")
-    public ResponseEntity<Map<String, Integer>> getAssetCount(@PathVariable String vendorId) {
-        int count = vendorService.getAssetCount(vendorId);
-        Map<String, Integer> response = new HashMap<>();
-        response.put("count", count);
+    public ResponseEntity<Map<String, Integer>> getAssetCount(
+            @PathVariable String vendorId
+    ) {
+
+        int count =
+                vendorService.getAssetCount(
+                        vendorId
+                );
+
+        Map<String, Integer> response =
+                new HashMap<>();
+
+        response.put(
+                "count",
+                count
+        );
+
         return ResponseEntity.ok(response);
     }
 
-    // ===================== STATISTICS & COUNTS =====================
+    // ============================================================
+    // STATISTICS
+    // ============================================================
 
     /**
-     * Get vendor statistics
+     * Vendor statistics
      * GET /api/vendors/stats
      */
     @GetMapping("/stats")
-    public ResponseEntity<Map<String, Object>> getStatistics() {
-        Map<String, Object> stats = new HashMap<>();
+    public ResponseEntity<Map<String, Object>>
+    getStatistics() {
 
-        stats.put("totalVendors", vendorService.count());
-        stats.put("activeVendors", vendorService.getActiveVendorsCount());
-        stats.put("inactiveVendors", vendorService.getInactiveVendorsCount());
+        Map<String, Object> stats =
+                new HashMap<>();
+
+        stats.put(
+                "totalVendors",
+                vendorService.count()
+        );
+
+        stats.put(
+                "activeVendors",
+                vendorService.getActiveVendorsCount()
+        );
+
+        stats.put(
+                "inactiveVendors",
+                vendorService.getInactiveVendorsCount()
+        );
 
         return ResponseEntity.ok(stats);
     }
 
     /**
-     * Count vendors by status
+     * Count by status
      * GET /api/vendors/count/status/{status}
      */
     @GetMapping("/count/status/{status}")
-    public ResponseEntity<Map<String, Long>> countByStatus(@PathVariable String status) {
-        long count = vendorService.countByStatus(
-                com.bmsedge.asset.model.VendorStatus.valueOf(status.toUpperCase())
+    public ResponseEntity<Map<String, Long>>
+    countByStatus(
+            @PathVariable String status
+    ) {
+
+        VendorStatus vendorStatus;
+
+        try {
+
+            vendorStatus =
+                    VendorStatus.valueOf(
+                            status.toUpperCase()
+                    );
+
+        } catch (IllegalArgumentException e) {
+
+            Map<String, Long> response =
+                    new HashMap<>();
+
+            response.put(
+                    "count",
+                    0L
+            );
+
+            return ResponseEntity.badRequest()
+                    .body(response);
+        }
+
+        long count =
+                vendorService.countByStatus(
+                        vendorStatus
+                );
+
+        Map<String, Long> response =
+                new HashMap<>();
+
+        response.put(
+                "count",
+                count
         );
-        Map<String, Long> response = new HashMap<>();
-        response.put("count", count);
+
         return ResponseEntity.ok(response);
     }
 
-    // ===================== VALIDATION =====================
+    // ============================================================
+    // VALIDATION
+    // ============================================================
 
     /**
-     * Check if email exists
-     * GET /api/vendors/check-email?email={email}
+     * Check vendor email
+     * GET /api/vendors/check-email?email=test@example.com
      */
     @GetMapping("/check-email")
-    public ResponseEntity<Map<String, Boolean>> checkEmail(@RequestParam String email) {
-        boolean exists = vendorService.emailExists(email);
-        Map<String, Boolean> response = new HashMap<>();
-        response.put("exists", exists);
+    public ResponseEntity<Map<String, Boolean>>
+    checkEmail(
+            @RequestParam String email
+    ) {
+
+        boolean exists =
+                vendorService.emailExists(email);
+
+        Map<String, Boolean> response =
+                new HashMap<>();
+
+        response.put(
+                "exists",
+                exists
+        );
+
         return ResponseEntity.ok(response);
     }
 
@@ -277,23 +492,43 @@ public class VendorController {
      * GET /api/vendors/{vendorId}/can-delete
      */
     @GetMapping("/{vendorId}/can-delete")
-    public ResponseEntity<Map<String, Boolean>> canDelete(@PathVariable String vendorId) {
-        boolean canDelete = vendorService.canDelete(vendorId);
-        Map<String, Boolean> response = new HashMap<>();
-        response.put("canDelete", canDelete);
+    public ResponseEntity<Map<String, Boolean>>
+    canDelete(
+            @PathVariable String vendorId
+    ) {
+
+        boolean canDelete =
+                vendorService.canDelete(
+                        vendorId
+                );
+
+        Map<String, Boolean> response =
+                new HashMap<>();
+
+        response.put(
+                "canDelete",
+                canDelete
+        );
+
         return ResponseEntity.ok(response);
     }
 
-    // ===================== STATUS ACTIONS =====================
+    // ============================================================
+    // STATUS ACTIONS
+    // ============================================================
 
     /**
      * Activate vendor
      * POST /api/vendors/{vendorId}/activate
      */
     @PostMapping("/{vendorId}/activate")
-    public ResponseEntity<Vendor> activate(@PathVariable String vendorId) {
-        Vendor vendor = vendorService.activate(vendorId);
-        return ResponseEntity.ok(vendor);
+    public ResponseEntity<Vendor> activate(
+            @PathVariable String vendorId
+    ) {
+
+        return ResponseEntity.ok(
+                vendorService.activate(vendorId)
+        );
     }
 
     /**
@@ -301,9 +536,13 @@ public class VendorController {
      * POST /api/vendors/{vendorId}/deactivate
      */
     @PostMapping("/{vendorId}/deactivate")
-    public ResponseEntity<Vendor> deactivate(@PathVariable String vendorId) {
-        Vendor vendor = vendorService.deactivate(vendorId);
-        return ResponseEntity.ok(vendor);
+    public ResponseEntity<Vendor> deactivate(
+            @PathVariable String vendorId
+    ) {
+
+        return ResponseEntity.ok(
+                vendorService.deactivate(vendorId)
+        );
     }
 
     /**
@@ -311,9 +550,13 @@ public class VendorController {
      * POST /api/vendors/{vendorId}/suspend
      */
     @PostMapping("/{vendorId}/suspend")
-    public ResponseEntity<Vendor> suspend(@PathVariable String vendorId) {
-        Vendor vendor = vendorService.suspend(vendorId);
-        return ResponseEntity.ok(vendor);
+    public ResponseEntity<Vendor> suspend(
+            @PathVariable String vendorId
+    ) {
+
+        return ResponseEntity.ok(
+                vendorService.suspend(vendorId)
+        );
     }
 
     /**
@@ -321,65 +564,104 @@ public class VendorController {
      * POST /api/vendors/{vendorId}/blacklist
      */
     @PostMapping("/{vendorId}/blacklist")
-    public ResponseEntity<Vendor> blacklist(@PathVariable String vendorId) {
-        Vendor vendor = vendorService.blacklist(vendorId);
-        return ResponseEntity.ok(vendor);
+    public ResponseEntity<Vendor> blacklist(
+            @PathVariable String vendorId
+    ) {
+
+        return ResponseEntity.ok(
+                vendorService.blacklist(vendorId)
+        );
     }
 
-    // ===================== ADVANCED QUERIES =====================
+    // ============================================================
+    // ADVANCED QUERIES
+    // ============================================================
 
     /**
-     * Get top rated vendors
-     * GET /api/vendors/top-rated?limit={limit}
+     * Top rated vendors
+     * GET /api/vendors/top-rated?limit=10
      */
     @GetMapping("/top-rated")
     public ResponseEntity<List<Vendor>> getTopRated(
-            @RequestParam(defaultValue = "10") int limit) {
-        List<Vendor> vendors = vendorService.getTopRatedVendors(limit);
-        return ResponseEntity.ok(vendors);
+            @RequestParam(defaultValue = "10") int limit
+    ) {
+
+        if (limit < 1) {
+            limit = 10;
+        }
+
+        return ResponseEntity.ok(
+                vendorService.getTopRatedVendors(
+                        limit
+                )
+        );
     }
 
     /**
-     * Get vendors with most assets
-     * GET /api/vendors/most-assets?limit={limit}
+     * Vendors with most assets
+     * GET /api/vendors/most-assets?limit=10
      */
     @GetMapping("/most-assets")
     public ResponseEntity<List<Vendor>> getMostAssets(
-            @RequestParam(defaultValue = "10") int limit) {
-        List<Vendor> vendors = vendorService.getVendorsWithMostAssets(limit);
-        return ResponseEntity.ok(vendors);
+            @RequestParam(defaultValue = "10") int limit
+    ) {
+
+        if (limit < 1) {
+            limit = 10;
+        }
+
+        return ResponseEntity.ok(
+                vendorService.getVendorsWithMostAssets(
+                        limit
+                )
+        );
     }
 
     /**
-     * Get vendors by specialization
+     * Vendors by specialization
      * GET /api/vendors/specialization/{specialization}
      */
     @GetMapping("/specialization/{specialization}")
-    public ResponseEntity<List<Vendor>> getBySpecialization(
-            @PathVariable String specialization) {
-        List<Vendor> vendors = vendorService.getBySpecialization(specialization);
-        return ResponseEntity.ok(vendors);
+    public ResponseEntity<List<Vendor>>
+    getBySpecialization(
+            @PathVariable String specialization
+    ) {
+
+        return ResponseEntity.ok(
+                vendorService.getBySpecialization(
+                        specialization
+                )
+        );
     }
 
     /**
-     * Get vendors without assets
+     * Vendors without assets
      * GET /api/vendors/without-assets
      */
     @GetMapping("/without-assets")
-    public ResponseEntity<List<Vendor>> getWithoutAssets() {
-        List<Vendor> vendors = vendorService.getVendorsWithoutAssets();
-        return ResponseEntity.ok(vendors);
+    public ResponseEntity<List<Vendor>>
+    getWithoutAssets() {
+
+        return ResponseEntity.ok(
+                vendorService.getVendorsWithoutAssets()
+        );
     }
 
     /**
-     * Get vendor performance summary
+     * Vendor performance
      * GET /api/vendors/{vendorId}/performance
      */
     @GetMapping("/{vendorId}/performance")
-    public ResponseEntity<VendorService.VendorPerformanceSummary> getPerformanceSummary(
-            @PathVariable String vendorId) {
+    public ResponseEntity<VendorService.VendorPerformanceSummary>
+    getPerformanceSummary(
+            @PathVariable String vendorId
+    ) {
+
         VendorService.VendorPerformanceSummary summary =
-                vendorService.getPerformanceSummary(vendorId);
+                vendorService.getPerformanceSummary(
+                        vendorId
+                );
+
         return ResponseEntity.ok(summary);
     }
 }
