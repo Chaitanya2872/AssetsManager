@@ -3,9 +3,9 @@ spring:
     name: asset-management
 
   datasource:
-    url: jdbc:postgresql://localhost:5432/postgresAcs
+    url: jdbc:postgresql://localhost:5432/fawnix_assets
     username: postgres
-    password: postgres@123
+    password: postgres
     driver-class-name: org.postgresql.Driver
 
   jpa:
