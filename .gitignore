@@ -1,0 +1,11 @@
+target/
+build/
+.gradle/
+*.class
+*.log
+hs_err_pid*.log
+.idea/
+.vscode/
+.settings/
+.project
+.classpath
