@@ -18,7 +18,20 @@ spring:
         dialect: org.hibernate.dialect.PostgreSQLDialect
 
 server:
-  port: 8088
+  # Overridable because approval-service defaults to 8088 as well. This one was hard-coded, so
+  # whichever of the two started second failed with "port already in use" and nothing said why.
+  port: ${SERVER_PORT:8088}
+
+# Registration was previously accidental. The eureka client starter is on the classpath, so
+# Spring Cloud auto-registers with no annotation - but with no service-url configured it used the
+# built-in default of localhost:8761, which inside a container is the container itself. compose
+# sets EUREKA_SERVER_URL, and nothing read it. This block is what makes that variable take effect.
+eureka:
+  instance:
+    prefer-ip-address: true
+  client:
+    service-url:
+      defaultZone: ${EUREKA_SERVER_URL:http://localhost:8761/eureka/}
 
 logging:
   level:
