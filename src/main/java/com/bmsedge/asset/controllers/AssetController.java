@@ -316,6 +316,53 @@ public class AssetController {
     }
 
     // ============================================================
+    // ASSIGN TO EMPLOYEE
+    // ============================================================
+
+    @RequestMapping(
+            value = "/{id}/assign",
+            method = {
+                    RequestMethod.POST,
+                    RequestMethod.PUT,
+                    RequestMethod.PATCH
+            }
+    )
+    public ResponseEntity<Asset> assignAsset(
+            @PathVariable String id,
+            @RequestBody(required = false) Map<String, Object> request,
+            @RequestParam(required = false) String assignedTo
+    ) {
+
+        String employee = assignedTo;
+
+        if (request != null) {
+
+            for (String key : new String[]{
+                    "assignedTo",
+                    "employeeName",
+                    "name",
+                    "userName",
+                    "employeeEmail",
+                    "email"
+            }) {
+
+                Object value = request.get(key);
+
+                if (employee == null
+                        && value instanceof String
+                        && !((String) value).isBlank()) {
+
+                    employee = (String) value;
+                }
+            }
+        }
+
+        return ResponseEntity.ok(
+                assetService.assignToEmployee(id, employee)
+        );
+    }
+
+    // ============================================================
     // SEARCH
     // ============================================================
 

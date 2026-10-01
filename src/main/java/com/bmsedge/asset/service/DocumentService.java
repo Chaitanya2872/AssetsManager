@@ -70,7 +70,7 @@ public class DocumentService {
             // Validate file type
             String contentType = file.getContentType();
             if (!isValidFileType(contentType)) {
-                throw new IllegalArgumentException("Invalid file type. Only PDF and DOCX files are allowed.");
+                throw new IllegalArgumentException("Invalid file type. Only PDF, DOCX, PNG, JPG and JPEG files are allowed.");
             }
 
             // Validate file size (10MB max)
@@ -106,7 +106,10 @@ public class DocumentService {
     private boolean isValidFileType(String contentType) {
         return contentType != null && (
                 contentType.equals("application/pdf") ||
-                        contentType.equals("application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+                        contentType.equals("application/vnd.openxmlformats-officedocument.wordprocessingml.document") ||
+                        contentType.equals("image/png") ||
+                        contentType.equals("image/jpeg") ||
+                        contentType.equals("image/jpg")
         );
     }
 

@@ -378,6 +378,32 @@ public class AssetService {
 
 
     // ============================================================
+    // ASSIGN TO EMPLOYEE
+    // ============================================================
+
+    public Asset assignToEmployee(
+            String id,
+            String assignedTo
+    ) {
+
+        String employee = normalize(assignedTo);
+
+        if (employee == null) {
+            throw new IllegalArgumentException(
+                    "Employee to assign the asset to is required"
+            );
+        }
+
+        Asset asset = get(id);
+
+        asset.setAssignedTo(employee);
+        asset.setStatus(AssetStatus.IN_USE);
+
+        return assetRepository.save(asset);
+    }
+
+
+    // ============================================================
     // DELETE
     // ============================================================
 
