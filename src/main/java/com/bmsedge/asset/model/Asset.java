@@ -72,6 +72,9 @@ public class Asset {
     @Column(name = "description", length = 1000)
     private String description;
 
+    @Column(name = "asset_image_url", length = 500)
+    private String assetImageUrl;
+
     @Column(name = "date_of_installation")
     private LocalDate dateOfInstallation;
 
@@ -289,6 +292,14 @@ public class Asset {
 
     public String getDescription() {
         return description;
+    }
+
+    public String getAssetImageUrl() {
+        return assetImageUrl;
+    }
+
+    public void setAssetImageUrl(String assetImageUrl) {
+        this.assetImageUrl = assetImageUrl;
     }
 
     public void setDescription(String description) {

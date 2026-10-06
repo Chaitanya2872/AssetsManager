@@ -13,6 +13,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Map;
 import java.util.Locale;
 
 @RestController
@@ -26,7 +27,7 @@ public class DocumentController {
     }
 
     @PostMapping("/upload")
-    public ResponseEntity<AssetDocument> uploadDocument(
+    public ResponseEntity<?> uploadDocument(
             @RequestParam("file") MultipartFile file,
             @RequestParam("assetId") String assetId,
             @RequestParam(value = "vendorId", required = false) String vendorId,
@@ -39,7 +40,8 @@ public class DocumentController {
                     file, assetId, vendorId, category, description, tags);
             return ResponseEntity.status(HttpStatus.CREATED).body(document);
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().build();
+            return ResponseEntity.badRequest()
+                    .body(Map.of("message", e.getMessage()));
         }
     }
 

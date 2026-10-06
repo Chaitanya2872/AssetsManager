@@ -353,6 +353,12 @@ public class AssetService {
         return assetRepository.save(asset);
     }
 
+    public Asset updateImageUrl(String id, String imageUrl) {
+        Asset asset = get(id);
+        asset.setAssetImageUrl(imageUrl);
+        return assetRepository.save(asset);
+    }
+
 
     // ============================================================
     // STATUS

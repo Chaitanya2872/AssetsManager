@@ -160,6 +160,17 @@ public class AssetController {
         return ResponseEntity.ok(updated);
     }
 
+    @PatchMapping("/{id}/image")
+    public ResponseEntity<Asset> updateAssetImage(
+            @PathVariable String id,
+            @RequestBody Map<String, String> request) {
+        String imageUrl = request.get("assetImageUrl");
+        if (imageUrl == null || imageUrl.isBlank()) {
+            return ResponseEntity.badRequest().build();
+        }
+        return ResponseEntity.ok(assetService.updateImageUrl(id, imageUrl));
+    }
+
     @PatchMapping("/{id}")
     public ResponseEntity<Asset> partialUpdateAsset(
             @PathVariable String id,
