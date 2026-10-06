@@ -2,12 +2,17 @@ package com.bmsedge.asset.controllers;
 
 import com.bmsedge.asset.dto.AssetUpdateRequest;
 import com.bmsedge.asset.model.Asset;
+import com.bmsedge.asset.model.AssetDocument;
 import com.bmsedge.asset.model.AssetStatus;
 import com.bmsedge.asset.service.AssetService;
+import com.bmsedge.asset.service.DocumentService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -21,9 +26,11 @@ import java.util.stream.Collectors;
 public class AssetController {
 
     private final AssetService assetService;
+        private final DocumentService documentService;
 
-    public AssetController(AssetService assetService) {
+        public AssetController(AssetService assetService, DocumentService documentService) {
         this.assetService = assetService;
+                this.documentService = documentService;
     }
 
     // ============================================================
@@ -75,6 +82,10 @@ public class AssetController {
 
         if (asset.getDescription() != null) {
             created.setDescription(asset.getDescription());
+        }
+
+        if (asset.getAssetImageUrl() != null) {
+            created.setAssetImageUrl(asset.getAssetImageUrl());
         }
 
         if (asset.getDateOfInstallation() != null) {
@@ -168,6 +179,25 @@ public class AssetController {
         if (imageUrl == null || imageUrl.isBlank()) {
             return ResponseEntity.badRequest().build();
         }
+        return ResponseEntity.ok(assetService.updateImageUrl(id, imageUrl));
+    }
+
+    @RequestMapping(
+            value = "/{id}/image",
+            method = {RequestMethod.POST, RequestMethod.PUT},
+            consumes = "multipart/form-data")
+    public ResponseEntity<Asset> uploadAssetImage(
+            @PathVariable String id,
+            @RequestParam("file") MultipartFile file,
+            HttpServletRequest request) {
+        assetService.get(id);
+        AssetDocument image = documentService.uploadAssetImage(file, id);
+        String imageUrl = ServletUriComponentsBuilder.fromRequestUri(request)
+                .replacePath("/api/documents/{documentId}/preview")
+                .replaceQuery(null)
+                .buildAndExpand(image.getDocumentId())
+                .toUriString();
+
         return ResponseEntity.ok(assetService.updateImageUrl(id, imageUrl));
     }
 

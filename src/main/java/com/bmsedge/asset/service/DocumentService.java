@@ -19,6 +19,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 
 @Service
@@ -63,7 +64,10 @@ public class DocumentService {
             throw new IllegalArgumentException("File name cannot be null");
         }
 
-        String fileExtension = originalFilename.substring(originalFilename.lastIndexOf("."));
+        int extensionStart = originalFilename.lastIndexOf('.');
+        String fileExtension = extensionStart < 0
+                ? ""
+                : originalFilename.substring(extensionStart);
         String fileName = UUID.randomUUID().toString() + fileExtension;
 
         try {
@@ -104,13 +108,35 @@ public class DocumentService {
     }
 
     private boolean isValidFileType(String contentType) {
-        return contentType != null && (
-                contentType.equals("application/pdf") ||
-                        contentType.equals("application/vnd.openxmlformats-officedocument.wordprocessingml.document") ||
-                        contentType.equals("image/png") ||
-                        contentType.equals("image/jpeg") ||
-                        contentType.equals("image/jpg")
-        );
+        if (contentType == null) {
+            return false;
+        }
+
+        String normalizedType = contentType.toLowerCase(Locale.ROOT);
+        return normalizedType.equals("application/pdf")
+                || normalizedType.equals("application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+                || isSupportedImageType(normalizedType);
+    }
+
+    public AssetDocument uploadAssetImage(MultipartFile file, String assetId) {
+        if (file == null || file.isEmpty()) {
+            throw new IllegalArgumentException("Please select an image file");
+        }
+        if (!isSupportedImageType(file.getContentType() == null
+                ? ""
+                : file.getContentType().toLowerCase(Locale.ROOT))) {
+            throw new IllegalArgumentException("Image must be a PNG, JPG, JPEG, GIF, or WebP file");
+        }
+
+        return uploadDocument(file, assetId, null, "ASSET_IMAGE", "Asset image", "asset-image");
+    }
+
+    private boolean isSupportedImageType(String contentType) {
+        return contentType.equals("image/png")
+                || contentType.equals("image/jpeg")
+                || contentType.equals("image/jpg")
+                || contentType.equals("image/gif")
+                || contentType.equals("image/webp");
     }
 
     private String determineDocumentType(String mimeType) {

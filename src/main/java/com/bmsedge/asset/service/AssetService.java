@@ -228,6 +228,10 @@ public class AssetService {
             );
         }
 
+        if (request.getAssetImageUrl() != null) {
+            asset.setAssetImageUrl(request.getAssetImageUrl());
+        }
+
         // --------------------------------------------------------
         // INSTALLATION / QUANTITY
         // --------------------------------------------------------
