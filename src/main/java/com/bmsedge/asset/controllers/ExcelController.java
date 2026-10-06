@@ -10,8 +10,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 @RestController
@@ -46,22 +48,43 @@ public class ExcelController {
 
             // Check file type
             String filename = file.getOriginalFilename();
-            if (filename == null || !filename.endsWith(".xlsx")) {
+            if (filename == null || !filename.toLowerCase(Locale.ROOT).endsWith(".xlsx")) {
                 response.put("success", false);
                 response.put("message", "Please upload an Excel file (.xlsx)");
                 return ResponseEntity.badRequest().body(response);
             }
 
             // Import assets
-            List<Asset> importedAssets = excelService.importAssetsFromExcel(file);
+            ExcelService.ImportResult result = excelService.importAssetsFromExcel(file);
+            List<Asset> importedAssets = result.importedAssets();
+            List<String> rowErrors = result.rowErrors();
+            boolean hasErrors = !rowErrors.isEmpty();
+            boolean importedAny = !importedAssets.isEmpty();
 
-            response.put("success", true);
-            response.put("message", "Assets imported successfully");
+            response.put("success", !hasErrors || importedAny);
+            response.put("partialSuccess", hasErrors && importedAny);
+            response.put("message", hasErrors
+                    ? importedAny
+                        ? "Some rows were skipped. See rowErrors for details."
+                        : "No assets were imported. See rowErrors for details."
+                    : "Assets imported successfully");
             response.put("totalImported", importedAssets.size());
+            response.put("totalSkipped", rowErrors.size());
+            response.put("rowErrors", rowErrors);
             response.put("assets", importedAssets);
 
-            return ResponseEntity.ok(response);
+            return hasErrors && !importedAny
+                    ? ResponseEntity.badRequest().body(response)
+                    : ResponseEntity.ok(response);
 
+        } catch (IllegalArgumentException e) {
+            response.put("success", false);
+            response.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        } catch (IOException e) {
+            response.put("success", false);
+            response.put("message", "The uploaded file could not be read as an .xlsx workbook");
+            return ResponseEntity.badRequest().body(response);
         } catch (Exception e) {
             response.put("success", false);
             response.put("message", "Error importing assets: " + e.getMessage());

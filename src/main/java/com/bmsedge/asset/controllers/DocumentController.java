@@ -3,6 +3,7 @@ package com.bmsedge.asset.controllers;
 import com.bmsedge.asset.model.AssetDocument;
 import com.bmsedge.asset.service.DocumentService;
 import org.springframework.core.io.Resource;
+import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -10,7 +11,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Locale;
 
 @RestController
 @RequestMapping("/api/documents")
@@ -85,6 +88,28 @@ public class DocumentController {
                 .contentType(MediaType.parseMediaType(document.getMimeType()))
                 .header(HttpHeaders.CONTENT_DISPOSITION,
                         "attachment; filename=\"" + document.getDocumentName() + "\"")
+                .body(resource);
+    }
+
+    @GetMapping("/{id}/preview")
+    public ResponseEntity<Resource> previewImage(@PathVariable String id) {
+        AssetDocument document = documentService.get(id);
+        String mimeType = document.getMimeType();
+
+        if (!"IMAGE".equalsIgnoreCase(document.getDocumentType())
+                || mimeType == null
+                || !mimeType.toLowerCase(Locale.ROOT).startsWith("image/")) {
+            return ResponseEntity.status(HttpStatus.UNSUPPORTED_MEDIA_TYPE).build();
+        }
+
+        Resource resource = documentService.downloadDocument(id);
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(mimeType))
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        ContentDisposition.inline()
+                                .filename(document.getDocumentName(), StandardCharsets.UTF_8)
+                                .build()
+                                .toString())
                 .body(resource);
     }
 

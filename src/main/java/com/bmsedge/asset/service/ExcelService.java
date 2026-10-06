@@ -8,17 +8,25 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.math.BigDecimal;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.Iterator;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
 
 @Service
 public class ExcelService {
@@ -33,55 +41,80 @@ public class ExcelService {
     /**
      * Import assets from Excel file
      */
-    public List<Asset> importAssetsFromExcel(MultipartFile file) throws IOException {
+    @Transactional
+    public ImportResult importAssetsFromExcel(MultipartFile file) throws IOException {
+        if (file == null || file.isEmpty()) {
+            throw new IllegalArgumentException("Please upload a non-empty Excel file");
+        }
 
-        List<Asset> savedAssets = new ArrayList<>();
+        List<Asset> assetsToSave = new ArrayList<>();
+        List<String> rowErrors = new ArrayList<>();
+        Set<String> serialNumbersInFile = new HashSet<>();
 
-        try (InputStream is = file.getInputStream();
-             Workbook workbook = new XSSFWorkbook(is)) {
+        try (InputStream input = file.getInputStream();
+             Workbook workbook = new XSSFWorkbook(input)) {
+            if (workbook.getNumberOfSheets() == 0) {
+                throw new IllegalArgumentException("The workbook contains no sheets");
+            }
 
             Sheet sheet = workbook.getSheetAt(0);
-            Iterator<Row> rows = sheet.iterator();
-
-            // Skip header
-            if (rows.hasNext()) {
-                rows.next();
+            DataFormatter formatter = new DataFormatter(Locale.ROOT);
+            FormulaEvaluator evaluator = workbook.getCreationHelper().createFormulaEvaluator();
+            Row headerRow = sheet.getRow(0);
+            if (headerRow == null) {
+                throw new IllegalArgumentException("The worksheet must contain a header row");
             }
 
-            int rowNumber = 1;
-
-            while (rows.hasNext()) {
-                Row row = rows.next();
-                rowNumber++;
-
-                try {
-                    Asset asset = parseRowToAsset(row, rowNumber);
-
-                    if (asset == null) {
-                        continue;
-                    }
-
-                    // 🔑 CHECK DUPLICATE SERIAL NUMBER
-                    String serialNumber = asset.getSerialNumber();
-                    if (serialNumber != null &&
-                            assetRepository.existsById(serialNumber)) {
-
-                        logger.warn("Skipping row {} - duplicate serial number: {}",
-                                rowNumber, serialNumber);
-                        continue;
-                    }
-
-                    Asset saved = assetRepository.save(asset);
-                    savedAssets.add(saved);
-
-                } catch (Exception e) {
-                    logger.error("Error processing row {}: {}", rowNumber, e.getMessage());
+            Map<String, Integer> columns = new HashMap<>();
+            for (Cell cell : headerRow) {
+                String header = normalizeHeader(formatter.formatCellValue(cell, evaluator));
+                if (!header.isEmpty()) {
+                    columns.put(header, cell.getColumnIndex());
                 }
             }
+            requireHeader(columns, "Asset Name");
+            requireHeader(columns, "Asset Category");
 
-            logger.info("Successfully imported {} assets from Excel", savedAssets.size());
-            return savedAssets;
+            for (int rowIndex = 1; rowIndex <= sheet.getLastRowNum(); rowIndex++) {
+                Row row = sheet.getRow(rowIndex);
+                if (isRowEmpty(row, formatter, evaluator)) {
+                    continue;
+                }
+
+                int rowNumber = rowIndex + 1;
+                try {
+                    Asset asset = parseRowToAsset(row, columns, formatter, evaluator);
+                    String serialNumber = asset.getSerialNumber();
+
+                    if (serialNumber != null) {
+                        if (!serialNumbersInFile.add(serialNumber)) {
+                            throw new IllegalArgumentException(
+                                    "Duplicate serial number in this file: " + serialNumber);
+                        }
+                        if (assetRepository.existsBySerialNumber(serialNumber)) {
+                            throw new IllegalArgumentException(
+                                    "Serial number already exists: " + serialNumber);
+                        }
+                    }
+
+                    assetsToSave.add(asset);
+                } catch (IllegalArgumentException e) {
+                    String message = "Row " + rowNumber + ": " + e.getMessage();
+                    rowErrors.add(message);
+                    logger.warn("{}", message);
+                }
+            }
         }
+
+        List<Asset> importedAssets = assetsToSave.isEmpty()
+                ? List.of()
+                : assetRepository.saveAll(assetsToSave);
+
+        logger.info("Imported {} assets; skipped {} rows", importedAssets.size(), rowErrors.size());
+        return new ImportResult(importedAssets, rowErrors);
+    }
+
+    public record ImportResult(List<Asset> importedAssets, List<String> rowErrors) {
     }
 
 
@@ -133,41 +166,42 @@ public class ExcelService {
     /**
      * Parse Excel row to Asset object
      */
-    private Asset parseRowToAsset(Row row, int rowNumber) {
-        // Skip empty rows
-        if (isRowEmpty(row)) {
-            return null;
+    private Asset parseRowToAsset(
+            Row row,
+            Map<String, Integer> columns,
+            DataFormatter formatter,
+            FormulaEvaluator evaluator) {
+        Asset asset = new Asset();
+        String assetName = getCellValueAsString(row, columns, "Asset Name", formatter, evaluator);
+        String assetCategory = getCellValueAsString(row, columns, "Asset Category", formatter, evaluator);
+        if (assetName == null) {
+            throw new IllegalArgumentException("Asset Name is required");
+        }
+        if (assetCategory == null) {
+            throw new IllegalArgumentException("Asset Category is required");
         }
 
-        Asset asset = new Asset();
+        asset.setAssetName(assetName);
+        asset.setAssetCategory(assetCategory);
+        asset.setModelNumber(getCellValueAsString(row, columns, "Model Number", formatter, evaluator));
+        asset.setQuantity(getCellValueAsInteger(row, columns, "Quantity", formatter, evaluator));
+        if (asset.getQuantity() < 1) {
+            throw new IllegalArgumentException("Quantity must be greater than zero");
+        }
+        asset.setSerialNumber(getCellValueAsString(row, columns, "Serial Number", formatter, evaluator));
+        asset.setAssetType(getCellValueAsString(row, columns, "Asset Type", formatter, evaluator));
+        asset.setManufacturer(getCellValueAsString(row, columns, "Manufacturer", formatter, evaluator));
+        asset.setDateOfInstallation(getCellValueAsDate(row, columns, "Date of Installation", formatter, evaluator));
+        asset.setLocation(getCellValueAsString(row, columns, "Location", formatter, evaluator));
+        asset.setDescription(getCellValueAsString(row, columns, "Description", formatter, evaluator));
+        asset.setBranch(getCellValueAsString(row, columns, "Branch", formatter, evaluator));
+        asset.setDlpEndDate(getCellValueAsDate(row, columns, "DLP End Date", formatter, evaluator));
 
+        String status = getCellValueAsString(row, columns, "Status", formatter, evaluator);
         try {
-            // S.No is auto-generated, skip column 0
-            asset.setModelNumber(getCellValueAsString(row.getCell(1)));
-            asset.setAssetName(getCellValueAsString(row.getCell(2)));
-            asset.setQuantity(getCellValueAsInteger(row.getCell(3)));
-            asset.setSerialNumber(getCellValueAsString(row.getCell(4)));
-            asset.setAssetCategory(getCellValueAsString(row.getCell(5)));
-            asset.setAssetType(getCellValueAsString(row.getCell(6)));
-            asset.setManufacturer(getCellValueAsString(row.getCell(7)));
-            asset.setDateOfInstallation(getCellValueAsDate(row.getCell(8)));
-            asset.setLocation(getCellValueAsString(row.getCell(9)));
-            asset.setDescription(getCellValueAsString(row.getCell(10)));
-            asset.setBranch(getCellValueAsString(row.getCell(11)));
-            asset.setDlpEndDate(getCellValueAsDate(row.getCell(12)));
-
-            String statusStr = getCellValueAsString(row.getCell(13));
-            asset.setStatus(parseStatus(statusStr));
-
-            // Generate asset ID if serial number exists, otherwise use row number
-            String id = asset.getSerialNumber() != null ?
-                    asset.getSerialNumber() :
-                    "AST-" + System.currentTimeMillis() + "-" + rowNumber;
-            asset.setAssetId(id);
-
-        } catch (Exception e) {
-            logger.error("Error parsing row {}: {}", rowNumber, e.getMessage());
-            return null;
+            asset.setStatus(AssetStatus.fromValue(status));
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Invalid Status: " + status);
         }
 
         return asset;
@@ -208,83 +242,96 @@ public class ExcelService {
     }
 
     // Helper methods
-    private String getCellValueAsString(Cell cell) {
-        if (cell == null) return null;
+    private String getCellValueAsString(
+            Row row,
+            Map<String, Integer> columns,
+            String header,
+            DataFormatter formatter,
+            FormulaEvaluator evaluator) {
+        Cell cell = getCell(row, columns, header);
+        if (cell == null) {
+            return null;
+        }
 
-        switch (cell.getCellType()) {
-            case STRING:
-                return cell.getStringCellValue().trim();
-            case NUMERIC:
-                return String.valueOf((int) cell.getNumericCellValue());
-            case BOOLEAN:
-                return String.valueOf(cell.getBooleanCellValue());
-            default:
-                return null;
+        String value = formatter.formatCellValue(cell, evaluator).trim();
+        return value.isEmpty() ? null : value;
+    }
+
+    private Integer getCellValueAsInteger(
+            Row row,
+            Map<String, Integer> columns,
+            String header,
+            DataFormatter formatter,
+            FormulaEvaluator evaluator) {
+        String value = getCellValueAsString(row, columns, header, formatter, evaluator);
+        if (value == null) {
+            return 1;
+        }
+
+        try {
+            return new BigDecimal(value.replace(",", "")).intValueExact();
+        } catch (NumberFormatException | ArithmeticException e) {
+            throw new IllegalArgumentException("Quantity must be a whole number");
         }
     }
 
-    private Integer getCellValueAsInteger(Cell cell) {
-        if (cell == null) return 1;
-
-        switch (cell.getCellType()) {
-            case NUMERIC:
-                return (int) cell.getNumericCellValue();
-            case STRING:
-                try {
-                    return Integer.parseInt(cell.getStringCellValue().trim());
-                } catch (NumberFormatException e) {
-                    return 1;
-                }
-            default:
-                return 1;
+    private LocalDate getCellValueAsDate(
+            Row row,
+            Map<String, Integer> columns,
+            String header,
+            DataFormatter formatter,
+            FormulaEvaluator evaluator) {
+        Cell cell = getCell(row, columns, header);
+        if (cell == null) {
+            return null;
         }
-    }
-
-    private LocalDate getCellValueAsDate(Cell cell) {
-        if (cell == null) return null;
 
         try {
             if (cell.getCellType() == CellType.NUMERIC && DateUtil.isCellDateFormatted(cell)) {
-                Date date = cell.getDateCellValue();
-                return date.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+                return DateUtil.getLocalDateTime(cell.getNumericCellValue()).toLocalDate();
             }
-        } catch (Exception e) {
-            logger.warn("Error parsing date from cell: {}", e.getMessage());
+        } catch (RuntimeException e) {
+            throw new IllegalArgumentException(header + " is not a valid date");
         }
 
-        return null;
+        String value = formatter.formatCellValue(cell, evaluator).trim();
+        if (value.isEmpty()) {
+            return null;
+        }
+
+        try {
+            return LocalDate.parse(value);
+        } catch (DateTimeParseException e) {
+            try {
+                return LocalDate.parse(value, DateTimeFormatter.ofPattern("M/d/yyyy", Locale.US));
+            } catch (DateTimeParseException ignored) {
+                throw new IllegalArgumentException(header + " must use yyyy-MM-dd or an Excel date cell");
+            }
+        }
     }
 
-    private AssetStatus parseStatus(String status) {
-        if (status == null || status.trim().isEmpty()) {
-            return AssetStatus.AVAILABLE;
-        }
-
-        String normalized = status.trim().toUpperCase();
-
-        if (normalized.contains("IN USE")) {
-            return AssetStatus.IN_USE;
-        }
-
-        if (normalized.contains("AVAILABLE")) {
-            return AssetStatus.AVAILABLE;
-        }
-
-        if (normalized.contains("MAINTENANCE")) {
-            return AssetStatus.UNDER_MAINTENANCE;
-        }
-
-        logger.warn("Unknown status '{}', defaulting to AVAILABLE", status);
-        return AssetStatus.AVAILABLE;
+    private Cell getCell(Row row, Map<String, Integer> columns, String header) {
+        Integer index = columns.get(normalizeHeader(header));
+        return index == null ? null : row.getCell(index, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL);
     }
 
+    private String normalizeHeader(String header) {
+        return header == null
+                ? ""
+                : header.replaceAll("[^A-Za-z0-9]", "").toLowerCase(Locale.ROOT);
+    }
 
-    private boolean isRowEmpty(Row row) {
+    private void requireHeader(Map<String, Integer> columns, String header) {
+        if (!columns.containsKey(normalizeHeader(header))) {
+            throw new IllegalArgumentException("Missing required column: " + header);
+        }
+    }
+
+    private boolean isRowEmpty(Row row, DataFormatter formatter, FormulaEvaluator evaluator) {
         if (row == null) return true;
 
-        for (int i = row.getFirstCellNum(); i < row.getLastCellNum(); i++) {
-            Cell cell = row.getCell(i);
-            if (cell != null && cell.getCellType() != CellType.BLANK) {
+        for (Cell cell : row) {
+            if (!formatter.formatCellValue(cell, evaluator).isBlank()) {
                 return false;
             }
         }
