@@ -1,0 +1,15 @@
+Hello {{recipientName}},
+
+An asset has been assigned to {{employeeName}}.
+
+Asset Name: {{assetName}}
+Asset ID: {{assetId}}
+Serial Number: {{serialNumber}}
+Status: {{status}}
+Assigned Date: {{assignedDate}}
+
+Please check the asset details in the system:
+{{actionUrl}}
+
+Regards,
+{{companyName}}

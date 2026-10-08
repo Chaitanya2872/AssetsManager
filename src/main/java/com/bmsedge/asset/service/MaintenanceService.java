@@ -3,13 +3,20 @@ package com.bmsedge.asset.service;
 import com.bmsedge.asset.dto.MaintenanceCreateRequest;
 import com.bmsedge.asset.dto.MaintenanceUpdateRequest;
 import com.bmsedge.asset.exception.MaintenanceNotFoundException;
+import com.bmsedge.asset.model.Asset;
 import com.bmsedge.asset.model.Maintenance;
 import com.bmsedge.asset.model.MaintenanceStatus;
+import com.bmsedge.asset.model.Vendor;
+import com.bmsedge.asset.notification.EmailNotificationEvent;
+import com.bmsedge.asset.repository.AssetRepository;
 import com.bmsedge.asset.repository.MaintenanceRepository;
+import com.bmsedge.asset.repository.VendorRepository;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,6 +24,7 @@ import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 @Service
 @Transactional
@@ -26,12 +34,24 @@ public class MaintenanceService {
             LoggerFactory.getLogger(MaintenanceService.class);
 
     private final MaintenanceRepository repository;
+        private final AssetRepository assetRepository;
+        private final VendorRepository vendorRepository;
+        private final ApplicationEventPublisher eventPublisher;
+        private final String frontendBaseUrl;
 
 
     public MaintenanceService(
-            MaintenanceRepository repository
+                        MaintenanceRepository repository,
+                        AssetRepository assetRepository,
+                        VendorRepository vendorRepository,
+                        ApplicationEventPublisher eventPublisher,
+                        @Value("${app.frontend-base-url:http://localhost:3000}") String frontendBaseUrl
     ) {
         this.repository = repository;
+                this.assetRepository = assetRepository;
+                this.vendorRepository = vendorRepository;
+                this.eventPublisher = eventPublisher;
+                this.frontendBaseUrl = frontendBaseUrl;
     }
 
 
@@ -159,6 +179,10 @@ public class MaintenanceService {
 
         Maintenance saved =
                 repository.save(maintenance);
+
+                if (saved.getStatus() == MaintenanceStatus.SCHEDULED) {
+                        publishMaintenanceNotification(saved, false);
+                }
 
 
         logger.info(
@@ -315,6 +339,9 @@ public class MaintenanceService {
         Maintenance maintenance =
                 get(id);
 
+        MaintenanceStatus previousStatus = maintenance.getStatus();
+        LocalDate previousScheduledDate = maintenance.getScheduledDate();
+
 
         if (request.getScheduledDate() != null) {
             maintenance.setScheduledDate(
@@ -404,9 +431,16 @@ public class MaintenanceService {
         }
 
 
-        return repository.save(
-                maintenance
-        );
+        Maintenance updated = repository.save(maintenance);
+        if (updated.getStatus() == MaintenanceStatus.COMPLETED
+                && previousStatus != MaintenanceStatus.COMPLETED) {
+            publishMaintenanceNotification(updated, true);
+        } else if (updated.getStatus() == MaintenanceStatus.SCHEDULED
+                && (previousStatus != MaintenanceStatus.SCHEDULED
+                || !Objects.equals(previousScheduledDate, updated.getScheduledDate()))) {
+            publishMaintenanceNotification(updated, false);
+        }
+        return updated;
     }
 
 
@@ -423,6 +457,7 @@ public class MaintenanceService {
         Maintenance maintenance =
                 get(id);
 
+        boolean shouldNotifyCompletion = maintenance.getStatus() != MaintenanceStatus.COMPLETED;
 
         maintenance.setStatus(
                 MaintenanceStatus.COMPLETED
@@ -441,9 +476,32 @@ public class MaintenanceService {
         );
 
 
-        return repository.save(
-                maintenance
-        );
+        Maintenance completed = repository.save(maintenance);
+        if (shouldNotifyCompletion) {
+            publishMaintenanceNotification(completed, true);
+        }
+        return completed;
+    }
+
+    private void publishMaintenanceNotification(Maintenance maintenance, boolean completed) {
+        if (maintenance.getVendorId() == null || maintenance.getVendorId().isBlank()) {
+            return;
+        }
+
+        Vendor vendor = vendorRepository.findById(maintenance.getVendorId()).orElse(null);
+        if (vendor == null || vendor.getVendorEmail() == null || vendor.getVendorEmail().isBlank()) {
+            logger.info("Skipped maintenance email: no vendor email for maintenance {}",
+                    maintenance.getMaintenanceId());
+            return;
+        }
+
+        Asset asset = assetRepository.findById(maintenance.getAssetId()).orElse(null);
+        EmailNotificationEvent event = completed
+                ? EmailNotificationEvent.maintenanceCompleted(
+                        vendor.getVendorEmail(), vendor.getVendorName(), maintenance, asset, frontendBaseUrl)
+                : EmailNotificationEvent.maintenanceScheduled(
+                        vendor.getVendorEmail(), vendor.getVendorName(), maintenance, asset, frontendBaseUrl);
+        eventPublisher.publishEvent(event);
     }
 
 

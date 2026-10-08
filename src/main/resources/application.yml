@@ -8,6 +8,18 @@ spring:
     password: postgres
     driver-class-name: org.postgresql.Driver
 
+  mail:
+    host: ${MAIL_HOST:localhost}
+    port: ${MAIL_PORT:25}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      "[mail.smtp.auth]": ${MAIL_SMTP_AUTH:false}
+      "[mail.smtp.starttls.enable]": ${MAIL_SMTP_STARTTLS_ENABLE:false}
+      "[mail.smtp.connectiontimeout]": 5000
+      "[mail.smtp.timeout]": 5000
+      "[mail.smtp.writetimeout]": 5000
+
   jpa:
     hibernate:
       ddl-auto: update
@@ -21,6 +33,18 @@ server:
   # Overridable because approval-service defaults to 8088 as well. This one was hard-coded, so
   # whichever of the two started second failed with "port already in use" and nothing said why.
   port: ${SERVER_PORT:8088}
+
+app:
+  frontend-base-url: ${APP_FRONTEND_URL:http://localhost:3000}
+  notifications:
+    email:
+      enabled: ${EMAIL_NOTIFICATIONS_ENABLED:false}
+      from: ${MAIL_FROM:no-reply@localhost}
+
+management:
+  health:
+    mail:
+      enabled: ${EMAIL_NOTIFICATIONS_ENABLED:false}
 
 # Registration was previously accidental. The eureka client starter is on the classpath, so
 # Spring Cloud auto-registers with no annotation - but with no service-url configured it used the

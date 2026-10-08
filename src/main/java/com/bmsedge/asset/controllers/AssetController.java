@@ -8,17 +8,25 @@ import com.bmsedge.asset.service.AssetService;
 import com.bmsedge.asset.service.DocumentService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import org.springframework.core.io.Resource;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
+import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @RestController
@@ -182,6 +190,39 @@ public class AssetController {
         return ResponseEntity.ok(assetService.updateImageUrl(id, imageUrl));
     }
 
+        @GetMapping("/{id}/image")
+        public ResponseEntity<Resource> getAssetImage(@PathVariable String id) {
+                Asset asset = assetService.get(id);
+                String imageUrl = asset.getAssetImageUrl();
+                if (imageUrl == null || imageUrl.isBlank()) {
+                        return ResponseEntity.notFound().build();
+                }
+
+                String documentId = extractImageDocumentId(imageUrl);
+                if (documentId == null) {
+                        return ResponseEntity.notFound().build();
+                }
+
+                AssetDocument image = documentService.get(documentId);
+                String mimeType = image.getMimeType();
+                if (!id.equals(image.getAssetId())
+                                || !"IMAGE".equalsIgnoreCase(image.getDocumentType())
+                                || mimeType == null
+                                || !mimeType.toLowerCase(java.util.Locale.ROOT).startsWith("image/")) {
+                        return ResponseEntity.notFound().build();
+                }
+
+                Resource resource = documentService.downloadDocument(documentId);
+                return ResponseEntity.ok()
+                                .contentType(MediaType.parseMediaType(mimeType))
+                                .header(HttpHeaders.CONTENT_DISPOSITION,
+                                                ContentDisposition.inline()
+                                                                .filename(image.getDocumentName(), StandardCharsets.UTF_8)
+                                                                .build()
+                                                                .toString())
+                                .body(resource);
+        }
+
     @RequestMapping(
             value = "/{id}/image",
             method = {RequestMethod.POST, RequestMethod.PUT},
@@ -200,6 +241,17 @@ public class AssetController {
 
         return ResponseEntity.ok(assetService.updateImageUrl(id, imageUrl));
     }
+
+        private String extractImageDocumentId(String imageUrl) {
+                try {
+                        String path = URI.create(imageUrl).getPath();
+                        Matcher matcher = Pattern.compile("(?:^|/)api/documents/([^/]+)/preview/?$")
+                                        .matcher(path == null ? "" : path);
+                        return matcher.find() ? matcher.group(1) : null;
+                } catch (IllegalArgumentException e) {
+                        return null;
+                }
+        }
 
     @PatchMapping("/{id}")
     public ResponseEntity<Asset> partialUpdateAsset(
@@ -375,6 +427,7 @@ public class AssetController {
     ) {
 
         String employee = assignedTo;
+        String employeeEmail = null;
 
         if (request != null) {
 
@@ -382,9 +435,7 @@ public class AssetController {
                     "assignedTo",
                     "employeeName",
                     "name",
-                    "userName",
-                    "employeeEmail",
-                    "email"
+                    "userName"
             }) {
 
                 Object value = request.get(key);
@@ -396,10 +447,22 @@ public class AssetController {
                     employee = (String) value;
                 }
             }
+
+                        for (String key : new String[]{"employeeEmail", "email"}) {
+                                Object value = request.get(key);
+                                if (value instanceof String && !((String) value).isBlank()) {
+                                        employeeEmail = (String) value;
+                                        break;
+                                }
+                        }
         }
 
+                if (employee == null) {
+                        employee = employeeEmail;
+                }
+
         return ResponseEntity.ok(
-                assetService.assignToEmployee(id, employee)
+                                assetService.assignToEmployee(id, employee, employeeEmail)
         );
     }
 

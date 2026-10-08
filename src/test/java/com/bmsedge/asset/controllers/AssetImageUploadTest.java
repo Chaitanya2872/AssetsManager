@@ -5,6 +5,8 @@ import com.bmsedge.asset.model.AssetDocument;
 import com.bmsedge.asset.service.AssetService;
 import com.bmsedge.asset.service.DocumentService;
 import org.junit.jupiter.api.Test;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.http.MediaType;
 import org.springframework.http.HttpStatus;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockMultipartFile;
@@ -13,6 +15,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -51,4 +54,49 @@ class AssetImageUploadTest {
         verify(assetService).updateImageUrl(
                 "asset-123", "http://localhost:8088/api/documents/DOC-123/preview");
     }
+
+        @Test
+        void getsImageFromAssetImageUrl() {
+                AssetService assetService = mock(AssetService.class);
+                DocumentService documentService = mock(DocumentService.class);
+                AssetController controller = new AssetController(assetService, documentService);
+                Asset asset = new Asset();
+                asset.setAssetImageUrl("http://localhost:8088/api/documents/DOC-123/preview");
+                AssetDocument image = new AssetDocument();
+                image.setAssetId("asset-123");
+                image.setDocumentType("IMAGE");
+                image.setMimeType("image/png");
+                image.setDocumentName("device.png");
+                ByteArrayResource bytes = new ByteArrayResource(new byte[]{1, 2, 3});
+                when(assetService.get("asset-123")).thenReturn(asset);
+                when(documentService.get("DOC-123")).thenReturn(image);
+                when(documentService.downloadDocument("DOC-123")).thenReturn(bytes);
+
+                var response = controller.getAssetImage("asset-123");
+
+                assertEquals(HttpStatus.OK, response.getStatusCode());
+                assertEquals(MediaType.IMAGE_PNG, response.getHeaders().getContentType());
+                assertEquals(bytes, response.getBody());
+                verify(documentService).downloadDocument("DOC-123");
+        }
+
+        @Test
+        void doesNotServeImageDocumentFromAnotherAsset() {
+                AssetService assetService = mock(AssetService.class);
+                DocumentService documentService = mock(DocumentService.class);
+                AssetController controller = new AssetController(assetService, documentService);
+                Asset asset = new Asset();
+                asset.setAssetImageUrl("/api/documents/DOC-123/preview");
+                AssetDocument image = new AssetDocument();
+                image.setAssetId("different-asset");
+                image.setDocumentType("IMAGE");
+                image.setMimeType("image/png");
+                when(assetService.get("asset-123")).thenReturn(asset);
+                when(documentService.get("DOC-123")).thenReturn(image);
+
+                var response = controller.getAssetImage("asset-123");
+
+                assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+                verify(documentService, never()).downloadDocument("DOC-123");
+        }
 }

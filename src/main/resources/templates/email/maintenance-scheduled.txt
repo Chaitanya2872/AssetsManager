@@ -1,0 +1,14 @@
+Hello {{recipientName}},
+
+Maintenance has been scheduled for an asset.
+
+Asset Name: {{assetName}}
+Asset ID: {{assetId}}
+Status: {{status}}  
+Details: {{message}}
+
+Please check the asset details in the system:
+{{actionUrl}}
+
+Regards,
+{{companyName}}

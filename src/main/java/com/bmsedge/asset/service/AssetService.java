@@ -4,10 +4,13 @@ import com.bmsedge.asset.exception.AssetNotFoundException;
 import com.bmsedge.asset.model.Asset;
 import com.bmsedge.asset.model.AssetStatus;
 import com.bmsedge.asset.model.Vendor;
+import com.bmsedge.asset.notification.EmailNotificationEvent;
 import com.bmsedge.asset.repository.AssetRepository;
 import com.bmsedge.asset.repository.VendorRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,13 +27,19 @@ public class AssetService {
 
     private final AssetRepository assetRepository;
     private final VendorRepository vendorRepository;
+        private final ApplicationEventPublisher eventPublisher;
+        private final String frontendBaseUrl;
 
     public AssetService(
             AssetRepository assetRepository,
-            VendorRepository vendorRepository
+                        VendorRepository vendorRepository,
+                        ApplicationEventPublisher eventPublisher,
+                        @Value("${app.frontend-base-url:http://localhost:3000}") String frontendBaseUrl
     ) {
         this.assetRepository = assetRepository;
         this.vendorRepository = vendorRepository;
+                this.eventPublisher = eventPublisher;
+                this.frontendBaseUrl = frontendBaseUrl;
     }
 
 
@@ -395,6 +404,14 @@ public class AssetService {
             String id,
             String assignedTo
     ) {
+        return assignToEmployee(id, assignedTo, null);
+    }
+
+    public Asset assignToEmployee(
+            String id,
+            String assignedTo,
+            String assignedEmail
+    ) {
 
         String employee = normalize(assignedTo);
 
@@ -409,7 +426,18 @@ public class AssetService {
         asset.setAssignedTo(employee);
         asset.setStatus(AssetStatus.IN_USE);
 
-        return assetRepository.save(asset);
+                Asset saved = assetRepository.save(asset);
+                String recipientEmail = normalize(assignedEmail);
+                if (recipientEmail == null && employee.contains("@")) {
+                        recipientEmail = employee;
+                }
+                if (recipientEmail != null) {
+                        String recipientName = recipientEmail.equalsIgnoreCase(employee) ? null : employee;
+                        eventPublisher.publishEvent(EmailNotificationEvent.assetAssigned(
+                                        recipientEmail, recipientName, saved, frontendBaseUrl));
+                }
+
+                return saved;
     }
 
 

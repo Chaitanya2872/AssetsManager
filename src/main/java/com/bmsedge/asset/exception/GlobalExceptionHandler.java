@@ -1,5 +1,6 @@
 package com.bmsedge.asset.exception;
 
+import com.bmsedge.asset.exception.AssetNotFoundException;
 import com.bmsedge.asset.exception.VendorNotFoundException;
 import com.bmsedge.asset.exception.MaintenanceNotFoundException;
 import com.bmsedge.asset.exception.WorkOrderNotFoundException;
@@ -18,6 +19,18 @@ import java.util.Map;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    @ExceptionHandler(AssetNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleAssetNotFoundException(
+            AssetNotFoundException ex, WebRequest request) {
+        ErrorResponse error = new ErrorResponse(
+                HttpStatus.NOT_FOUND.value(),
+                ex.getMessage(),
+                LocalDateTime.now(),
+                request.getDescription(false)
+        );
+        return new ResponseEntity<>(error, HttpStatus.NOT_FOUND);
+    }
 
     @ExceptionHandler(VendorNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleVendorNotFoundException(
