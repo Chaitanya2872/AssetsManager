@@ -193,38 +193,38 @@ public class AssetController {
         return ResponseEntity.ok(assetService.updateImageUrl(id, imageUrl));
     }
 
-        @GetMapping("/{id}/image")
-        public ResponseEntity<Resource> getAssetImage(@PathVariable String id) {
-                Asset asset = assetService.get(id);
-                String imageUrl = asset.getAssetImageUrl();
-                if (imageUrl == null || imageUrl.isBlank()) {
-                        return ResponseEntity.notFound().build();
-                }
-
-                String documentId = extractImageDocumentId(imageUrl);
-                if (documentId == null) {
-                        return ResponseEntity.notFound().build();
-                }
-
-                AssetDocument image = documentService.get(documentId);
-                String mimeType = image.getMimeType();
-                if (!id.equals(image.getAssetId())
-                                || !"IMAGE".equalsIgnoreCase(image.getDocumentType())
-                                || mimeType == null
-                                || !mimeType.toLowerCase(java.util.Locale.ROOT).startsWith("image/")) {
-                        return ResponseEntity.notFound().build();
-                }
-
-                Resource resource = documentService.downloadDocument(documentId);
-                return ResponseEntity.ok()
-                                .contentType(MediaType.parseMediaType(mimeType))
-                                .header(HttpHeaders.CONTENT_DISPOSITION,
-                                                ContentDisposition.inline()
-                                                                .filename(image.getDocumentName(), StandardCharsets.UTF_8)
-                                                                .build()
-                                                                .toString())
-                                .body(resource);
+    @GetMapping("/{id}/image")
+    public ResponseEntity<Resource> getAssetImage(@PathVariable String id) {
+        Asset asset = assetService.get(id);
+        String imageUrl = asset.getAssetImageUrl();
+        if (imageUrl == null || imageUrl.isBlank()) {
+            return ResponseEntity.notFound().build();
         }
+
+        String documentId = extractImageDocumentId(imageUrl);
+        if (documentId == null) {
+            return ResponseEntity.notFound().build();
+        }
+
+        AssetDocument image = documentService.get(documentId);
+        String mimeType = image.getMimeType();
+        if (!id.equals(image.getAssetId())
+                || !"IMAGE".equalsIgnoreCase(image.getDocumentType())
+                || mimeType == null
+                || !mimeType.toLowerCase(java.util.Locale.ROOT).startsWith("image/")) {
+            return ResponseEntity.notFound().build();
+        }
+
+        Resource resource = documentService.downloadDocument(documentId);
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(mimeType))
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        ContentDisposition.inline()
+                                .filename(image.getDocumentName(), StandardCharsets.UTF_8)
+                                .build()
+                                .toString())
+                .body(resource);
+    }
 
     @RequestMapping(
             value = "/{id}/image",
