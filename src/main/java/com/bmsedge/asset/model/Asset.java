@@ -50,6 +50,9 @@ public class Asset {
     @Column(name = "asset_type", length = 50)
     private String assetType;
 
+    @Column(name = "asset_subcategory", length = 100)
+    private String assetSubcategory;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 50)
     private AssetStatus status;
@@ -232,6 +235,14 @@ public class Asset {
 
     public void setAssetCategory(String assetCategory) {
         this.assetCategory = assetCategory;
+    }
+
+    public String getAssetSubcategory() {
+        return assetSubcategory;
+    }
+
+    public void setAssetSubcategory(String assetSubcategory) {
+        this.assetSubcategory = assetSubcategory;
     }
 
     public String getAssetType() {
@@ -519,7 +530,7 @@ public class Asset {
 
     @JsonProperty("qrCode")
     public String getQrCode() {
-        return assetId;
+        return assetId == null ? null : "ASSET:" + assetId;
     }
 
     @JsonProperty("id")

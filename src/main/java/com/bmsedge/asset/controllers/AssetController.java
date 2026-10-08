@@ -6,13 +6,11 @@ import com.bmsedge.asset.model.AssetDocument;
 import com.bmsedge.asset.model.AssetStatus;
 import com.bmsedge.asset.service.AssetService;
 import com.bmsedge.asset.service.DocumentService;
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -57,8 +55,13 @@ public class AssetController {
         Asset created = assetService.create(
                 asset.getAssetName(),
                 asset.getAssetCategory(),
-                asset.getLocation()
+                asset.getLocation(),
+                asset.getAssetId()
         );
+
+        if (asset.getAssetSubcategory() != null) {
+            created.setAssetSubcategory(asset.getAssetSubcategory());
+        }
 
         if (asset.getAssetType() != null) {
             created.setAssetType(asset.getAssetType());
@@ -188,17 +191,28 @@ public class AssetController {
             consumes = "multipart/form-data")
     public ResponseEntity<Asset> uploadAssetImage(
             @PathVariable String id,
-            @RequestParam("file") MultipartFile file,
-            HttpServletRequest request) {
-        assetService.get(id);
+            @RequestParam("file") MultipartFile file) {
+        String previousImageUrl = assetService.get(id).getAssetImageUrl();
         AssetDocument image = documentService.uploadAssetImage(file, id);
-        String imageUrl = ServletUriComponentsBuilder.fromRequestUri(request)
-                .replacePath("/api/documents/{documentId}/preview")
-                .replaceQuery(null)
-                .buildAndExpand(image.getDocumentId())
-                .toUriString();
+        String imageUrl = "/api/documents/" + image.getDocumentId() + "/preview";
 
-        return ResponseEntity.ok(assetService.updateImageUrl(id, imageUrl));
+        Asset updated = assetService.updateImageUrl(id, imageUrl);
+
+        // Replacing an image must not leave the previous document and file behind.
+        if (previousImageUrl != null) {
+            java.util.regex.Matcher previous = java.util.regex.Pattern
+                    .compile("^/api/documents/([^/]+)/preview$")
+                    .matcher(previousImageUrl);
+            if (previous.matches() && !previous.group(1).equals(image.getDocumentId())) {
+                try {
+                    documentService.delete(previous.group(1));
+                } catch (RuntimeException ignored) {
+                    // previous document already gone; nothing to clean up
+                }
+            }
+        }
+
+        return ResponseEntity.ok(updated);
     }
 
     @PatchMapping("/{id}")
