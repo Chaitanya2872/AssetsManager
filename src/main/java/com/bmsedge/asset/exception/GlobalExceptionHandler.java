@@ -6,6 +6,8 @@ import com.bmsedge.asset.exception.MaintenanceNotFoundException;
 import com.bmsedge.asset.exception.WorkOrderNotFoundException;
 import com.bmsedge.asset.exception.DocumentNotFoundException;
 import org.springframework.http.HttpStatus;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.support.MissingServletRequestPartException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -102,6 +104,30 @@ public class GlobalExceptionHandler {
             errors.put(fieldName, errorMessage);
         });
         return new ResponseEntity<>(errors, HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ErrorResponse> handleMaxUploadSize(
+            MaxUploadSizeExceededException ex, WebRequest request) {
+        ErrorResponse error = new ErrorResponse(
+                HttpStatus.PAYLOAD_TOO_LARGE.value(),
+                "File size exceeds maximum limit of 10MB",
+                LocalDateTime.now(),
+                request.getDescription(false)
+        );
+        return new ResponseEntity<>(error, HttpStatus.PAYLOAD_TOO_LARGE);
+    }
+
+    @ExceptionHandler(MissingServletRequestPartException.class)
+    public ResponseEntity<ErrorResponse> handleMissingPart(
+            MissingServletRequestPartException ex, WebRequest request) {
+        ErrorResponse error = new ErrorResponse(
+                HttpStatus.BAD_REQUEST.value(),
+                "Please select an image file",
+                LocalDateTime.now(),
+                request.getDescription(false)
+        );
+        return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);
     }
 
     @ExceptionHandler(Exception.class)

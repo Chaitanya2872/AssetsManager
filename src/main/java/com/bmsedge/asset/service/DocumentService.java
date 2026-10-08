@@ -68,6 +68,9 @@ public class DocumentService {
         String fileExtension = extensionStart < 0
                 ? ""
                 : originalFilename.substring(extensionStart);
+        if (!fileExtension.matches("\\.[A-Za-z0-9]{1,10}")) {
+            fileExtension = "";
+        }
         String fileName = UUID.randomUUID().toString() + fileExtension;
 
         try {
@@ -201,7 +204,7 @@ public class DocumentService {
                 return resource;
             } else {
                 logger.error("File not found or not readable: {}", document.getDocumentName());
-                throw new RuntimeException("File not found or not readable: " + document.getDocumentName());
+                throw new DocumentNotFoundException("file", document.getDocumentName());
             }
         } catch (MalformedURLException ex) {
             logger.error("File not found: {}", document.getDocumentName(), ex);

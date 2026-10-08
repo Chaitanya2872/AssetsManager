@@ -50,7 +50,8 @@ public class AssetService {
     public Asset create(
             String name,
             String category,
-            String location
+            String location,
+            String requestedAssetId
     ) {
 
         if (name == null || name.isBlank()) {
@@ -73,6 +74,24 @@ public class AssetService {
         );
 
         Asset asset = new Asset();
+
+        if (requestedAssetId != null && !requestedAssetId.isBlank()) {
+            String tag = requestedAssetId.trim();
+
+            if (!tag.matches("[A-Za-z0-9][A-Za-z0-9._-]{0,99}")) {
+                throw new IllegalArgumentException(
+                        "Asset ID / Tag may contain only letters, digits, '.', '_' and '-'"
+                );
+            }
+
+            if (assetRepository.existsById(tag)) {
+                throw new IllegalArgumentException(
+                        "Asset ID / Tag already exists: " + tag
+                );
+            }
+
+            asset.setAssetId(tag);
+        }
 
         asset.setAssetName(name.trim());
         asset.setAssetCategory(category.trim());
@@ -164,6 +183,12 @@ public class AssetService {
         if (request.getAssetType() != null) {
             asset.setAssetType(
                     request.getAssetType().trim()
+            );
+        }
+
+        if (request.getAssetSubcategory() != null) {
+            asset.setAssetSubcategory(
+                    request.getAssetSubcategory().trim()
             );
         }
 
