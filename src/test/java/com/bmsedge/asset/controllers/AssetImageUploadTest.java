@@ -49,6 +49,47 @@ class AssetImageUploadTest {
     }
 
     @Test
+    void createsAssetWithOptionalImageUsingMultipartRequest() {
+        AssetService assetService = mock(AssetService.class);
+        DocumentService documentService = mock(DocumentService.class);
+        AssetController controller = new AssetController(assetService, documentService);
+        Asset request = new Asset();
+        request.setAssetName("Laptop");
+        request.setAssetCategory("IT");
+        request.setLocation("HQ");
+
+        Asset created = new Asset();
+        created.setAssetId("asset-123");
+        created.setAssetName("Laptop");
+        created.setAssetCategory("IT");
+        created.setLocation("HQ");
+
+        MockMultipartFile image = new MockMultipartFile(
+                "image", "device.png", "image/png", new byte[]{1, 2, 3});
+        AssetDocument document = new AssetDocument();
+        document.setDocumentId("DOC-123");
+
+        when(assetService.create("Laptop", "IT", "HQ", null)).thenReturn(created);
+        when(documentService.uploadAssetImage(image, "asset-123")).thenReturn(document);
+        when(assetService.updateImageUrl("asset-123", "/api/documents/DOC-123/preview")).thenAnswer(inv -> {
+            created.setAssetImageUrl(inv.getArgument(1));
+            return created;
+        });
+        when(assetService.update(eq("asset-123"), eq(created))).thenAnswer(inv -> {
+            created.setAssetImageUrl(created.getAssetImageUrl());
+            return created;
+        });
+
+        var response = controller.createAsset(request, image);
+
+        assertEquals(HttpStatus.CREATED, response.getStatusCode());
+        assertEquals("asset-123", response.getBody().getAssetId());
+        assertEquals("/api/documents/DOC-123/preview", response.getBody().getAssetImageUrl());
+        verify(documentService).uploadAssetImage(image, "asset-123");
+        verify(assetService).updateImageUrl("asset-123", "/api/documents/DOC-123/preview");
+    }
+
+    @Test
     void getsImageFromAssetImageUrl() {
         AssetService assetService = mock(AssetService.class);
         DocumentService documentService = mock(DocumentService.class);

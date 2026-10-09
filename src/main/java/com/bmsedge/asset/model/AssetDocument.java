@@ -150,7 +150,7 @@ public class AssetDocument {
     public String getMimeType() {
         return mimeType;
     }
-
+    
     public void setMimeType(String mimeType) {
         this.mimeType = mimeType;
     }

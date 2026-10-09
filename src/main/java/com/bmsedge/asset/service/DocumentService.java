@@ -125,21 +125,28 @@ public class DocumentService {
         if (file == null || file.isEmpty()) {
             throw new IllegalArgumentException("Please select an image file");
         }
-        if (!isSupportedImageType(file.getContentType() == null
+
+        String contentType = file.getContentType() == null
                 ? ""
-                : file.getContentType().toLowerCase(Locale.ROOT))) {
+                : file.getContentType().toLowerCase(Locale.ROOT);
+
+        if (!isSupportedImageType(contentType)) {
             throw new IllegalArgumentException("Image must be a PNG, JPG, JPEG, GIF, or WebP file");
+        }
+
+        if (file.getSize() > 10 * 1024 * 1024) {
+            throw new IllegalArgumentException("Image size exceeds maximum limit of 10MB");
         }
 
         return uploadDocument(file, assetId, null, "ASSET_IMAGE", "Asset image", "asset-image");
     }
 
     private boolean isSupportedImageType(String contentType) {
-        return contentType.equals("image/png")
-                || contentType.equals("image/jpeg")
-                || contentType.equals("image/jpg")
-                || contentType.equals("image/gif")
-                || contentType.equals("image/webp");
+        return "image/png".equals(contentType)
+                || "image/jpeg".equals(contentType)
+                || "image/jpg".equals(contentType)
+                || "image/gif".equals(contentType)
+                || "image/webp".equals(contentType);
     }
 
     private String determineDocumentType(String mimeType) {

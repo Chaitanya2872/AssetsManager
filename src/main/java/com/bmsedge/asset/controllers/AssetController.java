@@ -59,6 +59,27 @@ public class AssetController {
     public ResponseEntity<Asset> createAsset(
             @Valid @RequestBody Asset asset
     ) {
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(createAssetInternal(asset, null));
+    }
+
+    @PostMapping(
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE
+    )
+    public ResponseEntity<Asset> createAsset(
+            @RequestPart("asset") Asset asset,
+            @RequestPart(value = "image", required = false) MultipartFile image
+    ) {
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(createAssetInternal(asset, image));
+    }
+
+    private Asset createAssetInternal(Asset asset, MultipartFile image) {
+        if (asset == null) {
+            throw new IllegalArgumentException("Asset payload is required");
+        }
 
         Asset created = assetService.create(
                 asset.getAssetName(),
@@ -161,14 +182,19 @@ public class AssetController {
             );
         }
 
+        if (image != null && !image.isEmpty()) {
+            AssetDocument uploadedImage = documentService.uploadAssetImage(image, created.getAssetId());
+            String imageUrl = "/api/documents/" + uploadedImage.getDocumentId() + "/preview";
+            created.setAssetImageUrl(imageUrl);
+            created = assetService.updateImageUrl(created.getAssetId(), imageUrl);
+        }
+
         Asset saved = assetService.update(
                 created.getAssetId(),
                 created
         );
 
-        return ResponseEntity
-                .status(HttpStatus.CREATED)
-                .body(saved);
+        return saved;
     }
 
     @PutMapping("/{id}")
@@ -191,6 +217,24 @@ public class AssetController {
             return ResponseEntity.badRequest().build();
         }
         return ResponseEntity.ok(assetService.updateImageUrl(id, imageUrl));
+    }
+
+    @DeleteMapping("/{id}/image")
+    public ResponseEntity<Void> deleteAssetImage(@PathVariable String id) {
+        Asset asset = assetService.get(id);
+        String imageUrl = asset.getAssetImageUrl();
+        if (imageUrl != null && !imageUrl.isBlank()) {
+            String documentId = extractImageDocumentId(imageUrl);
+            if (documentId != null) {
+                try {
+                    documentService.delete(documentId);
+                } catch (RuntimeException ignored) {
+                    // Keep the asset consistent even if the stored image document is already missing.
+                }
+            }
+            assetService.updateImageUrl(id, null);
+        }
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/{id}/image")
