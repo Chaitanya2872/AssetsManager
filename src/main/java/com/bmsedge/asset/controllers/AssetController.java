@@ -15,6 +15,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
@@ -56,6 +57,7 @@ public class AssetController {
     }
 
     @PostMapping
+    @Transactional
     public ResponseEntity<Asset> createAsset(
             @Valid @RequestBody Asset asset
     ) {
@@ -67,6 +69,7 @@ public class AssetController {
     @PostMapping(
             consumes = MediaType.MULTIPART_FORM_DATA_VALUE
     )
+    @Transactional
     public ResponseEntity<Asset> createAsset(
             @RequestPart("asset") Asset asset,
             @RequestPart(value = "image", required = false) MultipartFile image
@@ -274,6 +277,7 @@ public class AssetController {
             value = "/{id}/image",
             method = {RequestMethod.POST, RequestMethod.PUT},
             consumes = "multipart/form-data")
+    @Transactional
     public ResponseEntity<Asset> uploadAssetImage(
             @PathVariable String id,
             @RequestParam("file") MultipartFile file) {

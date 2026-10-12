@@ -23,6 +23,13 @@ public interface MaintenanceRepository
 
 
     List<Maintenance>
+    findByAssetIdAndStatusNotIn(
+            String assetId,
+            java.util.Collection<MaintenanceStatus> statuses
+    );
+
+
+    List<Maintenance>
     findByVendorId(
             String vendorId
     );

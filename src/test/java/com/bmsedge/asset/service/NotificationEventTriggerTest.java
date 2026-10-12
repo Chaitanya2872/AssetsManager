@@ -29,6 +29,7 @@ class NotificationEventTriggerTest {
     void assetAssignmentPublishesNotificationToAssigneeEmail() {
         AssetRepository assetRepository = mock(AssetRepository.class);
         VendorRepository vendorRepository = mock(VendorRepository.class);
+        MaintenanceRepository maintenanceRepository = mock(MaintenanceRepository.class);
         ApplicationEventPublisher publisher = mock(ApplicationEventPublisher.class);
         Asset asset = new Asset();
         asset.setAssetId("asset-1");
@@ -37,7 +38,11 @@ class NotificationEventTriggerTest {
         when(assetRepository.findById("asset-1")).thenReturn(Optional.of(asset));
         when(assetRepository.save(any(Asset.class))).thenAnswer(invocation -> invocation.getArgument(0));
         AssetService service = new AssetService(
-                assetRepository, vendorRepository, publisher, "https://assets.example.com");
+                assetRepository,
+                vendorRepository,
+                new AssetMaintenanceSyncService(assetRepository, maintenanceRepository),
+                publisher,
+                "https://assets.example.com");
 
         service.assignToEmployee("asset-1", "Alex", "alex@example.com");
 
@@ -77,6 +82,7 @@ class NotificationEventTriggerTest {
                 maintenanceRepository,
                 assetRepository,
                 vendorRepository,
+                new AssetMaintenanceSyncService(assetRepository, maintenanceRepository),
                 publisher,
                 "https://assets.example.com");
         MaintenanceCreateRequest request = new MaintenanceCreateRequest();

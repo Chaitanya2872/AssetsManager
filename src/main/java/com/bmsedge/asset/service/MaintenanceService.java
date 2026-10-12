@@ -36,6 +36,7 @@ public class MaintenanceService {
     private final MaintenanceRepository repository;
         private final AssetRepository assetRepository;
         private final VendorRepository vendorRepository;
+        private final AssetMaintenanceSyncService maintenanceSync;
         private final ApplicationEventPublisher eventPublisher;
         private final String frontendBaseUrl;
 
@@ -44,12 +45,14 @@ public class MaintenanceService {
                         MaintenanceRepository repository,
                         AssetRepository assetRepository,
                         VendorRepository vendorRepository,
+                        AssetMaintenanceSyncService maintenanceSync,
                         ApplicationEventPublisher eventPublisher,
                         @Value("${app.frontend-base-url:http://localhost:3000}") String frontendBaseUrl
     ) {
         this.repository = repository;
                 this.assetRepository = assetRepository;
                 this.vendorRepository = vendorRepository;
+                this.maintenanceSync = maintenanceSync;
                 this.eventPublisher = eventPublisher;
                 this.frontendBaseUrl = frontendBaseUrl;
     }
@@ -100,8 +103,19 @@ public class MaintenanceService {
         );
 
 
-        Maintenance maintenance =
-                new Maintenance();
+        boolean alreadyUnderMaintenance = maintenanceSync
+                .findActive(request.getAssetId().trim())
+                .stream()
+                .findAny()
+                .isPresent();
+
+        if (alreadyUnderMaintenance) {
+            throw new IllegalArgumentException(
+                    "Device is already under maintenance"
+            );
+        }
+
+        Maintenance maintenance = new Maintenance();
 
 
         maintenance.setAssetId(
@@ -179,6 +193,8 @@ public class MaintenanceService {
 
         Maintenance saved =
                 repository.save(maintenance);
+
+        maintenanceSync.onMaintenanceChanged(saved.getAssetId());
 
                 if (saved.getStatus() == MaintenanceStatus.SCHEDULED) {
                         publishMaintenanceNotification(saved, false);
@@ -432,6 +448,7 @@ public class MaintenanceService {
 
 
         Maintenance updated = repository.save(maintenance);
+        maintenanceSync.onMaintenanceChanged(updated.getAssetId());
         if (updated.getStatus() == MaintenanceStatus.COMPLETED
                 && previousStatus != MaintenanceStatus.COMPLETED) {
             publishMaintenanceNotification(updated, true);
@@ -477,6 +494,7 @@ public class MaintenanceService {
 
 
         Maintenance completed = repository.save(maintenance);
+        maintenanceSync.onMaintenanceChanged(completed.getAssetId());
         if (shouldNotifyCompletion) {
             publishMaintenanceNotification(completed, true);
         }
@@ -517,6 +535,8 @@ public class MaintenanceService {
         repository.delete(
                 maintenance
         );
+        repository.flush();
+        maintenanceSync.onMaintenanceChanged(maintenance.getAssetId());
 
         logger.info(
                 "Maintenance deleted successfully: {}",

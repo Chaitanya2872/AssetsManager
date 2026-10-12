@@ -27,17 +27,20 @@ public class AssetService {
 
     private final AssetRepository assetRepository;
     private final VendorRepository vendorRepository;
+    private final AssetMaintenanceSyncService maintenanceSync;
         private final ApplicationEventPublisher eventPublisher;
         private final String frontendBaseUrl;
 
     public AssetService(
             AssetRepository assetRepository,
                         VendorRepository vendorRepository,
+                        AssetMaintenanceSyncService maintenanceSync,
                         ApplicationEventPublisher eventPublisher,
                         @Value("${app.frontend-base-url:http://localhost:3000}") String frontendBaseUrl
     ) {
         this.assetRepository = assetRepository;
         this.vendorRepository = vendorRepository;
+        this.maintenanceSync = maintenanceSync;
                 this.eventPublisher = eventPublisher;
                 this.frontendBaseUrl = frontendBaseUrl;
     }
@@ -163,6 +166,7 @@ public class AssetService {
         }
 
         Asset asset = get(id);
+        AssetStatus previousStatus = asset.getStatus();
 
         // --------------------------------------------------------
         // BASIC INFORMATION
@@ -222,6 +226,10 @@ public class AssetService {
 
             String serialNumber =
                     request.getSerialNumber().trim();
+
+            if (serialNumber.equals("-")) {
+                serialNumber = "";
+            }
 
             if (!serialNumber.isBlank()
                     && assetRepository.existsBySerialNumberAndAssetIdNot(
@@ -388,7 +396,9 @@ public class AssetService {
 
         validateDates(asset);
 
-        return assetRepository.save(asset);
+        Asset saved = assetRepository.save(asset);
+        maintenanceSync.onAssetStatusChanged(saved, previousStatus);
+        return saved;
     }
 
     public Asset updateImageUrl(String id, String imageUrl) {
@@ -414,10 +424,13 @@ public class AssetService {
         }
 
         Asset asset = get(id);
+        AssetStatus previousStatus = asset.getStatus();
 
         asset.setStatus(status);
 
-        return assetRepository.save(asset);
+        Asset saved = assetRepository.save(asset);
+        maintenanceSync.onAssetStatusChanged(saved, previousStatus);
+        return saved;
     }
 
 
