@@ -455,6 +455,27 @@ public class AssetController {
         return ResponseEntity.ok(response);
     }
 
+    @DeleteMapping("/bulk")
+    public ResponseEntity<Map<String, Object>> deleteAssets(@RequestBody List<String> assetIds) {
+        assetService.deleteAll(assetIds);
+        return ResponseEntity.ok(Map.of("success", true, "deletedCount", assetIds.size()));
+    }
+
+    @PatchMapping("/bulk/status")
+    public ResponseEntity<List<Asset>> updateAssetsStatus(@RequestBody Map<String, Object> request) {
+        Object rawIds = request.get("assetIds");
+        Object rawStatus = request.get("status");
+        if (!(rawIds instanceof List<?> ids) || rawStatus == null) {
+            throw new IllegalArgumentException("Asset IDs and status are required");
+        }
+        List<String> assetIds = ids.stream().map(String::valueOf).toList();
+        AssetStatus status = AssetStatus.fromValue(String.valueOf(rawStatus));
+        if (status != AssetStatus.RETIRED && status != AssetStatus.UNDER_MAINTENANCE) {
+            throw new IllegalArgumentException("Bulk status updates are only available for retirement or maintenance");
+        }
+        return ResponseEntity.ok(assetService.updateStatus(assetIds, status));
+    }
+
     // ============================================================
     // STATUS
     // ============================================================
@@ -525,6 +546,21 @@ public class AssetController {
 
         return ResponseEntity.ok(
                                 assetService.assignToEmployee(id, employee, employeeEmail)
+        );
+    }
+
+    // ============================================================
+    // ASSETS ASSIGNED TO AN EMPLOYEE
+    // ============================================================
+
+    @GetMapping("/assigned")
+    public ResponseEntity<List<Asset>> getAssignedAssets(
+            @RequestParam(required = false) String name,
+            @RequestParam(required = false) String email
+    ) {
+
+        return ResponseEntity.ok(
+                assetService.getAssetsAssignedTo(name, email)
         );
     }
 

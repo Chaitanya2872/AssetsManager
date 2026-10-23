@@ -1,6 +1,7 @@
 package com.bmsedge.asset.service;
 
 import com.bmsedge.asset.dto.MaintenanceCreateRequest;
+import com.bmsedge.asset.dto.BulkMaintenanceCreateRequest;
 import com.bmsedge.asset.dto.MaintenanceUpdateRequest;
 import com.bmsedge.asset.exception.MaintenanceNotFoundException;
 import com.bmsedge.asset.model.Asset;
@@ -96,6 +97,11 @@ public class MaintenanceService {
             );
         }
 
+        if (request.getEndDate() != null && request.getScheduledDate() != null
+                && request.getEndDate().isBefore(request.getScheduledDate())) {
+            throw new IllegalArgumentException("End date cannot be before scheduled date");
+        }
+
 
         logger.info(
                 "Creating maintenance for asset: {}",
@@ -132,6 +138,10 @@ public class MaintenanceService {
 
         maintenance.setScheduledDate(
                 request.getScheduledDate()
+        );
+
+        maintenance.setEndDate(
+                request.getEndDate()
         );
 
         maintenance.setPriority(
@@ -208,6 +218,48 @@ public class MaintenanceService {
 
 
         return saved;
+    }
+
+    public List<Maintenance> createForAssets(BulkMaintenanceCreateRequest bulk) {
+        if (bulk == null || bulk.getAssetIds() == null || bulk.getAssetIds().isEmpty()) {
+            throw new IllegalArgumentException("At least one asset is required");
+        }
+        if (bulk.getMaintenanceType() == null || bulk.getMaintenanceType().isBlank()
+                || bulk.getPriority() == null || bulk.getPriority().isBlank()
+                || bulk.getTechnicianName() == null || bulk.getTechnicianName().isBlank()
+                || bulk.getScheduledDate() == null || bulk.getScheduledDate().isBefore(LocalDate.now())
+                || bulk.getEndDate() == null) {
+            throw new IllegalArgumentException("Maintenance type, current or future schedule date, end date, priority, and technician are required");
+        }
+        if (bulk.getEndDate().isBefore(bulk.getScheduledDate())) {
+            throw new IllegalArgumentException("End date cannot be before scheduled date");
+        }
+        List<String> ids = bulk.getAssetIds().stream().filter(Objects::nonNull)
+                .map(String::trim).filter(id -> !id.isBlank()).distinct().toList();
+        if (ids.size() != bulk.getAssetIds().size()) {
+            throw new IllegalArgumentException("Asset IDs are invalid");
+        }
+        // Validate all targets and active schedules before creating anything.
+        ids.forEach(id -> {
+            if (!assetRepository.existsById(id)) {
+                throw new IllegalArgumentException("Asset not found: " + id);
+            }
+            if (!maintenanceSync.findActive(id).isEmpty()) {
+                throw new IllegalArgumentException("Asset is already under maintenance: " + id);
+            }
+        });
+        return ids.stream().map(id -> {
+            MaintenanceCreateRequest request = new MaintenanceCreateRequest();
+            request.setAssetId(id);
+            request.setMaintenanceType(bulk.getMaintenanceType());
+            request.setPriority(bulk.getPriority());
+            request.setScheduledDate(bulk.getScheduledDate());
+            request.setEndDate(bulk.getEndDate());
+            request.setTechnicianName(bulk.getTechnicianName());
+            request.setDescription(bulk.getDescription());
+            request.setNotes(bulk.getNotes());
+            return create(request);
+        }).toList();
     }
 
 
@@ -359,9 +411,24 @@ public class MaintenanceService {
         LocalDate previousScheduledDate = maintenance.getScheduledDate();
 
 
+        LocalDate updatedScheduledDate = request.getScheduledDate() != null
+                ? request.getScheduledDate()
+                : maintenance.getScheduledDate();
+        LocalDate updatedEndDate = request.getEndDate() != null
+                ? request.getEndDate()
+                : maintenance.getEndDate();
+        if (updatedScheduledDate != null && updatedEndDate != null
+                && updatedEndDate.isBefore(updatedScheduledDate)) {
+            throw new IllegalArgumentException("End date cannot be before scheduled date");
+        }
+
         if (request.getScheduledDate() != null) {
-            maintenance.setScheduledDate(
-                    request.getScheduledDate()
+            maintenance.setScheduledDate(request.getScheduledDate());
+        }
+
+        if (request.getEndDate() != null) {
+            maintenance.setEndDate(
+                    request.getEndDate()
             );
         }
 

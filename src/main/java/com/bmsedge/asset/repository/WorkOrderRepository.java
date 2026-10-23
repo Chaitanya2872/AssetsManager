@@ -18,6 +18,10 @@ public interface WorkOrderRepository extends JpaRepository<WorkOrder, String> {
 
     List<WorkOrder> findByAssetIdOrderByCreatedAtDesc(String assetId);
 
+    void deleteByAssetId(String assetId);
+
+    void deleteByMaintenanceIdIn(List<String> maintenanceIds);
+
     List<WorkOrder> findByVendorId(String vendorId);
 
     List<WorkOrder> findByStatus(WorkOrderStatus status);

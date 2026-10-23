@@ -17,6 +17,8 @@ public class MaintenanceCreateRequest {
 
     private LocalDate scheduledDate;
 
+    private LocalDate endDate;
+
     private MaintenanceStatus status;
 
     @NotBlank(message = "Priority is required")
@@ -78,6 +80,14 @@ public class MaintenanceCreateRequest {
 
     public void setScheduledDate(LocalDate scheduledDate) {
         this.scheduledDate = scheduledDate;
+    }
+
+    public LocalDate getEndDate() {
+        return endDate;
+    }
+
+    public void setEndDate(LocalDate endDate) {
+        this.endDate = endDate;
     }
 
 

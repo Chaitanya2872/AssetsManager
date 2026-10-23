@@ -25,6 +25,9 @@ public class Maintenance {
     @Column(name = "scheduled_date")
     private LocalDate scheduledDate;
 
+    @Column(name = "end_date")
+    private LocalDate endDate;
+
     @Column(name = "completed_date")
     private LocalDate completedDate;
 
@@ -136,6 +139,14 @@ public class Maintenance {
 
     public void setScheduledDate(LocalDate scheduledDate) {
         this.scheduledDate = scheduledDate;
+    }
+
+    public LocalDate getEndDate() {
+        return endDate;
+    }
+
+    public void setEndDate(LocalDate endDate) {
+        this.endDate = endDate;
     }
 
     public LocalDate getCompletedDate() {

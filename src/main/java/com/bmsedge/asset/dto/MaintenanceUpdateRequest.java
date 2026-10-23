@@ -8,6 +8,8 @@ public class MaintenanceUpdateRequest {
 
     private LocalDate scheduledDate;
 
+    private LocalDate endDate;
+
     private LocalDate completedDate;
 
     private MaintenanceStatus status;
@@ -41,6 +43,14 @@ public class MaintenanceUpdateRequest {
 
     public void setScheduledDate(LocalDate scheduledDate) {
         this.scheduledDate = scheduledDate;
+    }
+
+    public LocalDate getEndDate() {
+        return endDate;
+    }
+
+    public void setEndDate(LocalDate endDate) {
+        this.endDate = endDate;
     }
 
 

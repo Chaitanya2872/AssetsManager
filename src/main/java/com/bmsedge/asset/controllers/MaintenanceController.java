@@ -1,6 +1,7 @@
 package com.bmsedge.asset.controllers;
 
 import com.bmsedge.asset.dto.MaintenanceCreateRequest;
+import com.bmsedge.asset.dto.BulkMaintenanceCreateRequest;
 import com.bmsedge.asset.dto.MaintenanceUpdateRequest;
 import com.bmsedge.asset.model.Maintenance;
 import com.bmsedge.asset.model.MaintenanceStatus;
@@ -41,6 +42,14 @@ public class MaintenanceController {
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(maintenance);
+    }
+
+    @PostMapping("/bulk")
+    public ResponseEntity<List<Maintenance>> createBulk(
+            @Valid @RequestBody BulkMaintenanceCreateRequest request
+    ) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(maintenanceService.createForAssets(request));
     }
 
     // ============================================================

@@ -77,24 +77,14 @@ public class AssetService {
         );
 
         Asset asset = new Asset();
-
-        if (requestedAssetId != null && !requestedAssetId.isBlank()) {
-            String tag = requestedAssetId.trim();
-
-            if (!tag.matches("[A-Za-z0-9][A-Za-z0-9._-]{0,99}")) {
-                throw new IllegalArgumentException(
-                        "Asset ID / Tag may contain only letters, digits, '.', '_' and '-'"
-                );
-            }
-
-            if (assetRepository.existsById(tag)) {
-                throw new IllegalArgumentException(
-                        "Asset ID / Tag already exists: " + tag
-                );
-            }
-
-            asset.setAssetId(tag);
+        // Keep the internal relational key as a UUID. The public Asset ID is
+        // allocated separately from a database sequence and is never supplied by clients.
+        asset.setAssetId(UUID.randomUUID().toString());
+        Long nextAssetCode = assetRepository.nextAssetCodeSequenceValue();
+        if (nextAssetCode == null || nextAssetCode < 1) {
+            throw new IllegalStateException("Could not allocate an Asset ID");
         }
+        asset.setAssetCode("AST-%04d".formatted(nextAssetCode));
 
         asset.setAssetName(name.trim());
         asset.setAssetCategory(category.trim());
@@ -127,6 +117,7 @@ public class AssetService {
         }
 
         return assetRepository.findById(id)
+                .or(() -> assetRepository.findByAssetCode(id))
                 .orElseThrow(() -> {
 
                     logger.error(
@@ -480,12 +471,44 @@ public class AssetService {
 
 
     // ============================================================
+    // ASSETS ASSIGNED TO AN EMPLOYEE
+    // ============================================================
+
+    public List<Asset> getAssetsAssignedTo(String name, String email) {
+
+        String employeeName = normalize(name);
+        String employeeEmail = normalize(email);
+
+        if (employeeName == null && employeeEmail == null) {
+            return List.of();
+        }
+
+        Map<String, Asset> result = new LinkedHashMap<>();
+
+        if (employeeName != null) {
+            assetRepository.findByAssignedToIgnoreCase(employeeName)
+                    .forEach(a -> result.put(a.getAssetId(), a));
+        }
+
+        if (employeeEmail != null) {
+            assetRepository.findByAssignedToIgnoreCase(employeeEmail)
+                    .forEach(a -> result.put(a.getAssetId(), a));
+        }
+
+        return new ArrayList<>(result.values());
+    }
+
+
+    // ============================================================
     // DELETE
     // ============================================================
 
     public void delete(String id) {
 
         Asset asset = get(id);
+
+        // Remove linked maintenance history in the same transaction to avoid orphan records.
+        maintenanceSync.removeForAsset(asset.getAssetId());
 
         /*
          * Remove vendor relationships first.
@@ -508,6 +531,40 @@ public class AssetService {
                 "Asset deleted successfully: {}",
                 id
         );
+    }
+
+    public void deleteAll(List<String> ids) {
+        List<String> assetIds = validatedIds(ids);
+        // Resolve every ID before deleting any row so a bad request cannot partially apply.
+        List<Asset> selected = assetIds.stream().map(this::get).toList();
+        selected.forEach(asset -> delete(asset.getAssetId()));
+    }
+
+    public List<Asset> updateStatus(List<String> ids, AssetStatus status) {
+        if (status == null) {
+            throw new IllegalArgumentException("Asset status is required");
+        }
+        List<String> assetIds = validatedIds(ids);
+        List<Asset> selected = assetIds.stream().map(this::get).toList();
+        for (Asset asset : selected) {
+            AssetStatus previous = asset.getStatus();
+            asset.setStatus(status);
+            assetRepository.save(asset);
+            maintenanceSync.onAssetStatusChanged(asset, previous);
+        }
+        return selected;
+    }
+
+    private List<String> validatedIds(List<String> ids) {
+        if (ids == null || ids.isEmpty()) {
+            throw new IllegalArgumentException("At least one asset ID is required");
+        }
+        List<String> result = ids.stream().filter(Objects::nonNull).map(String::trim)
+                .filter(id -> !id.isBlank()).distinct().toList();
+        if (result.isEmpty() || result.size() != ids.size()) {
+            throw new IllegalArgumentException("Asset IDs are invalid");
+        }
+        return result;
     }
 
 

@@ -37,6 +37,11 @@ public class Asset {
     @Column(name = "asset_id", nullable = false, updatable = false, length = 100)
     private String assetId;
 
+    // Nullable during startup only: AssetCodeGenerator backfills existing rows,
+    // adds the unique index, then enforces NOT NULL before serving requests.
+    @Column(name = "asset_code", unique = true, updatable = false, length = 32)
+    private String assetCode;
+
     // ============================================================
     // BASIC INFORMATION
     // ============================================================
@@ -219,6 +224,14 @@ public class Asset {
 
     public void setAssetId(String assetId) {
         this.assetId = assetId;
+    }
+
+    public String getAssetCode() {
+        return assetCode;
+    }
+
+    public void setAssetCode(String assetCode) {
+        this.assetCode = assetCode;
     }
 
     public String getAssetName() {
@@ -530,7 +543,8 @@ public class Asset {
 
     @JsonProperty("qrCode")
     public String getQrCode() {
-        return assetId == null ? null : "ASSET:" + assetId;
+        String qrId = assetCode != null ? assetCode : assetId;
+        return qrId == null ? null : "ASSET:" + qrId;
     }
 
     @JsonProperty("id")

@@ -6,8 +6,10 @@ import com.bmsedge.asset.model.Maintenance;
 import com.bmsedge.asset.model.MaintenanceStatus;
 import com.bmsedge.asset.repository.AssetRepository;
 import com.bmsedge.asset.repository.MaintenanceRepository;
+import com.bmsedge.asset.repository.WorkOrderRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -41,17 +43,51 @@ public class AssetMaintenanceSyncService {
 
     private final AssetRepository assetRepository;
     private final MaintenanceRepository maintenanceRepository;
+    private final WorkOrderRepository workOrderRepository;
 
+    @Autowired
+    public AssetMaintenanceSyncService(
+            AssetRepository assetRepository,
+            MaintenanceRepository maintenanceRepository,
+            WorkOrderRepository workOrderRepository
+    ) {
+        this.assetRepository = assetRepository;
+        this.maintenanceRepository = maintenanceRepository;
+        this.workOrderRepository = workOrderRepository;
+    }
+
+    /** Retained for existing unit-level callers which exercise status synchronization only. */
     public AssetMaintenanceSyncService(
             AssetRepository assetRepository,
             MaintenanceRepository maintenanceRepository
     ) {
-        this.assetRepository = assetRepository;
-        this.maintenanceRepository = maintenanceRepository;
+        this(assetRepository, maintenanceRepository, null);
     }
 
     public List<Maintenance> findActive(String assetId) {
         return maintenanceRepository.findByAssetIdAndStatusNotIn(assetId, CLOSED);
+    }
+
+    public void removeForAsset(String assetId) {
+        List<Maintenance> records = maintenanceRepository.findByAssetIdOrderByScheduledDateDesc(assetId);
+        if (workOrderRepository == null) {
+            maintenanceRepository.deleteAll(records);
+            return;
+        }
+        if (records.isEmpty()) {
+            workOrderRepository.deleteByAssetId(assetId);
+            return;
+        }
+
+        List<String> maintenanceIds = records.stream()
+                .map(Maintenance::getMaintenanceId)
+                .filter(id -> id != null && !id.isBlank())
+                .toList();
+        if (!maintenanceIds.isEmpty()) {
+            workOrderRepository.deleteByMaintenanceIdIn(maintenanceIds);
+        }
+        workOrderRepository.deleteByAssetId(assetId);
+        maintenanceRepository.deleteAll(records);
     }
 
     /** Call after an asset's status was changed in Asset Master. */
@@ -70,9 +106,6 @@ public class AssetMaintenanceSyncService {
                 m.setPriority("MEDIUM");
                 m.setStatus(MaintenanceStatus.SCHEDULED);
                 m.setCost(0.0);
-                if (asset.getAssignedTo() != null && !asset.getAssignedTo().isBlank()) {
-                    m.setTechnicianName(asset.getAssignedTo());
-                }
                 if (asset.getVendorId() != null && !asset.getVendorId().isBlank()) {
                     m.setVendorId(asset.getVendorId());
                 }

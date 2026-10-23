@@ -14,11 +14,16 @@ import java.util.Optional;
 @Repository
 public interface AssetRepository extends JpaRepository<Asset, String> {
 
+    @Query(value = "SELECT nextval('asset_code_seq')", nativeQuery = true)
+    Long nextAssetCodeSequenceValue();
+
     // ============================================================
     // BASIC QUERIES
     // ============================================================
 
     Optional<Asset> findBySerialNumber(String serialNumber);
+
+    Optional<Asset> findByAssetCode(String assetCode);
 
     boolean existsBySerialNumber(String serialNumber);
 
@@ -49,6 +54,7 @@ public interface AssetRepository extends JpaRepository<Asset, String> {
             FROM Asset a
             WHERE
                 LOWER(COALESCE(a.assetName, '')) LIKE LOWER(CONCAT('%', :query, '%'))
+                OR LOWER(COALESCE(a.assetCode, '')) LIKE LOWER(CONCAT('%', :query, '%'))
                 OR LOWER(COALESCE(a.assetCategory, '')) LIKE LOWER(CONCAT('%', :query, '%'))
                 OR LOWER(COALESCE(a.location, '')) LIKE LOWER(CONCAT('%', :query, '%'))
                 OR LOWER(COALESCE(a.serialNumber, '')) LIKE LOWER(CONCAT('%', :query, '%'))
@@ -70,7 +76,8 @@ public interface AssetRepository extends JpaRepository<Asset, String> {
             FROM Asset a
             WHERE
                 (:name IS NULL OR :name = '' OR
-                 LOWER(COALESCE(a.assetName, '')) LIKE LOWER(CONCAT('%', :name, '%')))
+                 LOWER(COALESCE(a.assetName, '')) LIKE LOWER(CONCAT('%', :name, '%')) OR
+                 LOWER(COALESCE(a.assetCode, '')) LIKE LOWER(CONCAT('%', :name, '%')))
             AND
                 (:category IS NULL OR :category = '' OR
                  a.assetCategory = :category)
@@ -283,4 +290,11 @@ public interface AssetRepository extends JpaRepository<Asset, String> {
             OR a.assignedTo = ''
             """)
     long countUnassignedAssets();
+
+
+    // ============================================================
+    // ASSETS ASSIGNED TO AN EMPLOYEE (matched by name and/or email)
+    // ============================================================
+
+    List<Asset> findByAssignedToIgnoreCase(String assignedTo);
 }
