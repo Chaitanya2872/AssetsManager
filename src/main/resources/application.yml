@@ -40,6 +40,13 @@ server:
 
 app:
   frontend-base-url: ${APP_FRONTEND_URL:http://localhost:3000}
+  # Every /api/** request needs an identity-service access token (see IdentityTokenFilter), so the port
+  # this service publishes no longer bypasses what the gateway checks. The default public key is the one
+  # the gateway and every other service verify with.
+  security:
+    enabled: ${ASSET_SECURITY_ENABLED:true}
+    jwt:
+      public-key: ${JWT_PUBLIC_KEY:MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAz4woDjpjkAC+DcXp1cEWG0xuQ/EdwhfzVpw4NEFR0AkfUosjwvJkv2XsBR8HQEhZQ4DIIX1xS/+iYVLIyXfzP9jh19aFScbpQYSKmEc7cBAk817DQ4x8amWBC5DAVuxa/2LC81g6ypYPLNkC+uVX3LGFeswsLsapEw3RrFlSlOCO2R7PWMmwNmwSisxQfjZc7Hku7Idkty3Qvct0yJ63lSaI+5s1WXMZxVQiK4ygoekpy/MMo+fukn7j1XcdW7P6q6BlxbjJybeNRtQLaezcTyRTlRpwmO3U3kKC1lnBH3yt83YwzrDtoW6180us93+J15df3podnoIbPJHfWueuwQIDAQAB}
   notifications:
     email:
       enabled: ${EMAIL_NOTIFICATIONS_ENABLED:false}
