@@ -34,6 +34,8 @@ spring:
         dialect: org.hibernate.dialect.PostgreSQLDialect
 
 server:
+  # Access tokens carry every permission key plus its scope; an admin's is ~10 KB, over the 8 KB default.
+  max-http-request-header-size: ${MAX_HTTP_REQUEST_HEADER_SIZE:64KB}
   # Overridable because approval-service defaults to 8088 as well. This one was hard-coded, so
   # whichever of the two started second failed with "port already in use" and nothing said why.
   port: ${SERVER_PORT:8088}
